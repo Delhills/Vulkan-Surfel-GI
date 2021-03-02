@@ -46,18 +46,42 @@ void main()
   // Calculate worldPos by using ray information
   const vec3 normal   = v0.normal.xyz * barycentricCoords.x + v1.normal.xyz * barycentricCoords.y + v2.normal.xyz * barycentricCoords.z;
   const vec2 uv       = v0.uv.xy * barycentricCoords.x + v1.uv.xy * barycentricCoords.y + v2.uv.xy * barycentricCoords.z;
-  const vec3 N        = normalize(model * vec4(normal, 0)).xyz;
+  vec3 N              = normalize(model * vec4(normal, 0)).xyz;
   const vec3 worldPos = gl_WorldRayOriginEXT + gl_WorldRayDirectionEXT * gl_HitTEXT;
 
+  // Calculate tangent and bitangent
+  vec3 edge1 = v0.position.xyz - v1.position.xyz;
+  vec3 edge2 = v0.position.xyz - v2.position.xyz;
+  vec2 deltaUV1 = v0.uv.xy - v1.uv.xy;
+  vec2 deltaUV2 = v0.uv.xy - v2.uv.xy;
+
+  float f = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y);
+
+  vec3 tangent;
+  tangent.x = f * (deltaUV2.y * edge1.x - deltaUV1.y * edge2.x);
+  tangent.y = f * (deltaUV2.y * edge1.y - deltaUV1.y * edge2.y);
+  tangent.z = f * (deltaUV2.y * edge1.z - deltaUV1.y * edge2.z);
+
+  vec3 bitangent;
+  bitangent.x = f * (-deltaUV2.y * edge1.x - deltaUV1.y * edge2.x);
+  bitangent.y = f * (-deltaUV2.y * edge1.y - deltaUV1.y * edge2.y);
+  bitangent.z = f * (-deltaUV2.y * edge1.z - deltaUV1.y * edge2.z);
+
+  vec3 T = normalize(vec3(model * vec4(tangent, 0)));
+  vec3 B = normalize(vec3(model * vec4(bitangent, 0)));
+
+  mat3 TBN = mat3(T, B, N);
+
   // Init values used for lightning
-	vec3 color = vec3(0);
-	float attenuation = 1.0;
-  float shadowFactor = 0.0;
+	vec3  color           = vec3(0);
+	float attenuation     = 1.0;
   float light_intensity = 1.0;
+  float shadowFactor    = 0.0;
 
   Material mat    = materials.mat[materialID];
   int shadingMode = int(mat.shadingMetallicRoughness.x);
   vec3 albedo     = mat.textures.x > -1 ? texture(textures[int(mat.textures.x)], uv).xyz : vec3(1);
+  N               = mat.textures.y > -1 ? TBN * normalize(texture(textures[int(mat.textures.y)], uv).xyz) : N;
   vec3 emissive   = mat.textures.z > -1 ? texture(textures[int(mat.textures.z)], uv).xyz : vec3(0);
 
   // Calculate light influence for each light
@@ -114,6 +138,7 @@ void main()
       difColor  = computeDiffuse(mat, N, L) * albedo;
       color    += difColor * light_intensity * light.color.xyz * attenuation * shadowFactor;
       color    += emissive;
+      //color = N;
       prd       = hitPayload(vec4(color, gl_HitTEXT), vec4(1, 1, 1, 0), worldPos, prd.seed);
     }
     else if(shadingMode == 3) // MIRALL

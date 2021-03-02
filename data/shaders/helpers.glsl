@@ -10,6 +10,7 @@ const int MAX_RECURSION = 10;
 // STRUCTS --------------------
 struct Vertex
 {
+  vec4 position;
   vec4 normal;
   vec4 color;
   vec4 uv;

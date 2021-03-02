@@ -55,7 +55,7 @@ void main()
   const int shadingMode = int(mat.shadingMetallicRoughness.x);
 
   // Init values used for lightning
-	vec3 color            = vec3(0);
+	vec3  color           = vec3(0);
 	float attenuation     = 1.0;
   float light_intensity = 1.0;
 

@@ -38,6 +38,7 @@ void Scene::create_scene()
 	// --------------------
 	Material* m_asphalt = new Material();
 	m_asphalt->diffuseTexture = Texture::get_id("asphalt.png");
+	m_asphalt->normalTexture = Texture::get_id("wall_normal_map.png");
 	Material* m_mirror = new Material();
 	m_mirror->shadingModel = 3;
 	Material* m_glass = new Material();
@@ -55,9 +56,9 @@ void Scene::create_scene()
 	p_mirror->_root[0]->addMaterial(m_mirror);
 	Prefab* p_glass_sphere = Prefab::GET("sphere.obj");
 	p_glass_sphere->_root[0]->addMaterial(m_glass);
-	Prefab* p_cornell	= Prefab::GET("cornellBox.gltf");
+	//Prefab* p_cornell	= Prefab::GET("cornellBox.gltf");
 	Prefab* p_helmet	= Prefab::GET("DamagedHelmet.gltf");
-	Prefab* p_lantern	= Prefab::GET("Lantern.gltf");
+	//Prefab* p_lantern	= Prefab::GET("Lantern.gltf");
 	//Prefab* p_car		= Prefab::GET("scene.gltf");
 	//Prefab* p_box		= Prefab::GET("Box.glb");
 	Prefab* p_lucy		= Prefab::GET("lucy", Mesh::GET("lucy.obj"));
@@ -78,7 +79,7 @@ void Scene::create_scene()
 	floor->prefab = p_quad;
 	floor->m_matrix = glm::translate(glm::mat4(1), glm::vec3(0, 0, -5)) *
 		glm::rotate(glm::mat4(1), glm::radians(-90.0f), glm::vec3(1, 0, 0)) *
-		glm::scale(glm::mat4(1), glm::vec3(50));
+		glm::scale(glm::mat4(1), glm::vec3(25));
 
 	//Object* car = new Object();
 	//car->prefab = p_car;
@@ -94,10 +95,10 @@ void Scene::create_scene()
 	cube->prefab = p_mirror;
 	cube->m_matrix = glm::translate(glm::mat4(1), glm::vec3(0, 0, -5));
 	
-	Object* cornell = new Object();
-	cornell->prefab = p_cornell;
-	cornell->m_matrix = glm::translate(glm::mat4(1), glm::vec3(0, 5, -10)) *
-		glm::scale(glm::mat4(1), glm::vec3(1));
+	//Object* cornell = new Object();
+	//cornell->prefab = p_cornell;
+	//cornell->m_matrix = glm::translate(glm::mat4(1), glm::vec3(0, 5, -10)) *
+	//	glm::scale(glm::mat4(1), glm::vec3(1));
 
 	Object* helmet = new Object();
 	helmet->prefab = p_helmet;

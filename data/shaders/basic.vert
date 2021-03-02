@@ -39,7 +39,7 @@ layout(push_constant) uniform constants
 void main()
 {
 	mat4 transformationMatrix 	= cameraData.projection * cameraData.view * pushC.matrix;
-	gl_Position 				=  transformationMatrix * vec4(inPosition, 1.0);
+	gl_Position 				= transformationMatrix * vec4(inPosition, 1.0);
 
 	outPosition = vec3(pushC.matrix * vec4(inPosition, 1.0)).xyz;
     outColor  	= inColor;

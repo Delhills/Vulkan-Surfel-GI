@@ -143,7 +143,6 @@ bool Mesh::load_from_obj(const char* filename)
 				};
 			}
 
-
 			if (uniqueVertices.count(vertex) == 0) {
 				uniqueVertices[vertex] = static_cast<uint32_t>(_vertices.size());
 				_vertices.push_back(vertex);
@@ -787,6 +786,7 @@ int Prefab::loadMaterial(const tinygltf::Model& tmodel, const int index)
 		mat->roughnessFactor			= tpbr.roughnessFactor;
 		mat->diffuseTexture				= tpbr.baseColorTexture.index;
 		mat->metallicRoughnessTexture	= tpbr.metallicRoughnessTexture.index;
+		mat->normalTexture				= tmat.normalTexture.index;
 	}
 
 	if (Material::exists(mat))
