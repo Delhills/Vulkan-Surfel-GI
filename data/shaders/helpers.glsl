@@ -51,55 +51,71 @@ vec3 computeSpecular(Material m, vec3 normal, vec3 lightDir, vec3 viewDir)
     return vec3(1) * specular;
 };
 
-mat3 rotMat(const vec3 axis, const float angle)
+mat3 angleAxis3x3(float angle, vec3 axis)
 {
-    float c = cos(angle);
+    axis = normalize(axis);
     float s = sin(angle);
+    float c = cos(angle);
+    float oc = 1.0 - c;
 
-    float t = 1 - c;
-    float x = axis.x;
-    float y = axis.y;
-    float z = axis.z;
-
-    return mat3(
-        t * x * x + c,      t * x * y - s * z,  t * x * z + s * y,
-        t * x * y + s * z,  t * y * y + c,      t * y * z - s * x,
-        t * x * z - s * y,  t * y * z + s * x,  t * z * z + c
-    );
+    return mat3(oc * axis.x * axis.x + c,           oc * axis.x * axis.y - axis.z * s,  oc * axis.z * axis.x + axis.y * s,
+                oc * axis.x * axis.y + axis.z * s,  oc * axis.y * axis.y + c,           oc * axis.y * axis.z - axis.x * s,
+                oc * axis.z * axis.x - axis.y * s,  oc * axis.y * axis.z + axis.x * s,  oc * axis.z * axis.z + c);
 }
 
-mat4 rotationMatrix(vec3 axis, float angle)
+mat3 rotationMatrix(vec3 axis, float angle)
 {
     axis = normalize(axis);
     float s = sin(angle);
     float c = cos(angle);
     float oc = 1.0 - c;
     
-    return mat4(oc * axis.x * axis.x + c,           oc * axis.x * axis.y - axis.z * s,  oc * axis.z * axis.x + axis.y * s,  0.0,
-                oc * axis.x * axis.y + axis.z * s,  oc * axis.y * axis.y + c,           oc * axis.y * axis.z - axis.x * s,  0.0,
-                oc * axis.z * axis.x - axis.y * s,  oc * axis.y * axis.z + axis.x * s,  oc * axis.z * axis.z + c,           0.0,
-                0.0,                                0.0,                                0.0,                                1.0);
+    return mat3(oc * axis.x * axis.x + c,           oc * axis.x * axis.y - axis.z * s,  oc * axis.z * axis.x + axis.y * s,
+                oc * axis.x * axis.y + axis.z * s,  oc * axis.y * axis.y + c,           oc * axis.y * axis.z - axis.x * s,
+                oc * axis.z * axis.x - axis.y * s,  oc * axis.y * axis.z + axis.x * s,  oc * axis.z * axis.z + c);
 }
 
 vec3 sampleCone(inout uint seed, const vec3 direction, const float angle)
 {
-    float cosAngle = cos(angle); //1
+    float cosAngle = cos(angle);
 
     // This range to [cosTheta, 1]. In case rnd is 1, z will be 1, whereas if rnd is 0, z will be cosTheta.
-    float z = rnd(seed) * (1.0 - cosAngle) + cosAngle; // 1
+    float z = rnd(seed) * (1.0 - cosAngle) + cosAngle;
 
     float phi = rnd(seed) * 2.0 * PI;
-    float x = sqrt(1.0 - z * z) * cos(phi); // 0
-    float y = sqrt(1.0 - z * z) * sin(phi); // 0
+    float x = sqrt(1.0 - z * z) * cos(phi);
+    float y = sqrt(1.0 - z * z) * sin(phi);
     vec3 north = vec3(0.0, 0.0, 1.0);
 
     vec3 axis = normalize(cross(north, normalize(direction)));
     float rotAngle = acos(dot(normalize(direction), north));
 
-    mat4 rot = rotationMatrix(axis, rotAngle);
+    mat3 rot = rotationMatrix(axis, rotAngle);
 
-    return vec3(rot * vec4(x, y, z, 1));//vec3(x, y, z);
+    return rot * vec3(x, y, z);
 }
+
+vec3 getConeSample(inout uint rngState, vec3 direction, float coneAngle) {
+    float cosAngle = cos(coneAngle);
+
+    // Generate points on the spherical cap around the north pole [1].
+    float z = rnd(rngState) * (1.0f - cosAngle) + cosAngle;
+    float phi = rnd(rngState) * 2.0f * PI;
+
+    float x = sqrt(1.0f - z * z) * cos(phi);
+    float y = sqrt(1.0f - z * z) * sin(phi);
+    vec3 north = vec3(0.f, 0.f, 1.f);
+
+    // Find the rotation axis u and rotation angle rot [1]
+    vec3 axis = normalize(cross(north, normalize(direction)));
+    float angle = acos(dot(normalize(direction), north));
+
+    // Convert rotation axis and angle to 3x3 rotation matrix [2]
+    mat3 R = angleAxis3x3(angle, axis);
+
+    return R * vec3(x, y, z);
+}
+
 
 vec3 sampleSphere(inout uint seed, const vec3 center, const float r)
 {

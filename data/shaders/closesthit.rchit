@@ -72,7 +72,7 @@ void main()
     L                               = normalize(L);
 		const float NdotL               = clamp(dot(N, L), 0.0, 1.0);
 		const float light_intensity     = isDirectional ? 1.0 : (light.color.w / (light_distance * light_distance));
-    float shadowFactor    = 0.0;
+    float shadowFactor              = 0.0;
 
     // Check if light has impact, then calculate shadow
     if( NdotL > 0 )
@@ -81,13 +81,23 @@ void main()
       {
         // Init as shadowed
         shadowed          = true;
-        const vec3 dir    = normalize(sampleSphere(prd.seed, light.pos.xyz, light.radius) - worldPos);
+        vec3 perpL = cross(L, vec3(0, 1, 0));
+        if(perpL == vec3(0)){
+          perpL.x = 1.0;
+        }
+
+        vec3 toLightEdge = normalize((light.pos.xyz + perpL * light.radius) - worldPos);
+        float coneAngle = acos(dot(L, toLightEdge)) * 2.0;
+
+        const vec3 dir = normalize(getConeSample(prd.seed, L, coneAngle));
+
+        //const vec3 dir    = normalize(sampleSphere(prd.seed, light.pos.xyz, light.radius) - worldPos);
         const uint flags  = gl_RayFlagsOpaqueEXT | gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsSkipClosestHitShaderEXT;
-        float tmin = 0.001, tmax = light_distance + 1;
+        float tmin = 0.001, tmax = light_distance + 100;
         
         // Shadow ray cast
         traceRayEXT(topLevelAS, flags, 0xFF, 1, 0, 1, 
-          worldPos + dir * 1e-2, tmin, dir, tmax, 1);
+          worldPos + dir * 5e-2, tmin, -dir, tmax, 1);
 
         if(!shadowed){
           shadowFactor++;
