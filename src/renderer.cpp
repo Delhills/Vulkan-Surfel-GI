@@ -1890,7 +1890,7 @@ void Renderer::create_rt_descriptors()
 		std::vector<rtVertexAttribute> vAttr;
 		vAttr.reserve(vertices.size());
 		for (Vertex& v : vertices) {
-			vAttr.push_back({ {v.position.x, v.position.y, v.position.z, 1}, {v.normal.x, v.normal.y, v.normal.z, 1}, {v.color.x, v.color.y, v.color.z, 1}, {v.uv.x, v.uv.y, 1, 1} });
+			vAttr.push_back({ {v.position.x, v.position.y, v.position.z, 1}, {v.normal.x, v.normal.y, v.normal.z, 1}, {v.color.x, v.color.y, v.color.z, 1}, {v.uv.x, v.uv.y, 1, 1}, v.tangent });
 		}
 
 		void* vdata;
@@ -2634,7 +2634,7 @@ void Renderer::create_hybrid_descriptors()
 		std::vector<Vertex> vertices = obj->prefab->_mesh->_vertices;
 		vAttr.reserve(vertices.size());
 		for (Vertex& v : vertices) {
-			vAttr.push_back({ {v.position.x, v.position.y, v.position.z, 1}, {v.normal.x, v.normal.y, v.normal.z, 1}, {v.color.x, v.color.y, v.color.z, 1}, {v.uv.x, v.uv.y, 1, 1} });
+			vAttr.push_back({ {v.position.x, v.position.y, v.position.z, 1}, {v.normal.x, v.normal.y, v.normal.z, 1}, {v.color.x, v.color.y, v.color.z, 1}, {v.uv.x, v.uv.y, 1, 1}, v.tangent });
 		}
 
 		void* vdata;

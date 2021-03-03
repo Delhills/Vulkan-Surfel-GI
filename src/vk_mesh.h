@@ -17,6 +17,7 @@ struct rtVertexAttribute
 	glm::vec4 normal;
 	glm::vec4 color;
 	glm::vec4 uv;
+	glm::vec4 tangent;
 };
 
 struct Vertex
@@ -25,6 +26,7 @@ struct Vertex
 	glm::vec3 normal;
 	glm::vec3 color;
 	glm::vec2 uv;
+	glm::vec4 tangent;
 
 	static VertexInputDescription get_vertex_description();
 

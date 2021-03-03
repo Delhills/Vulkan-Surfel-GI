@@ -21,7 +21,7 @@ GPUMaterial Material::materialToShader()
 	GPUMaterial mat;
 	mat.diffuseColor				= glm::vec4(diffuseColor[0], diffuseColor[1], diffuseColor[2], ior);
 	mat.textures					= glm::vec4(diffuseTexture, normalTexture, emissiveTexture, metallicRoughnessTexture);
-	mat.shadingMetallicRoughness	= glm::vec4(shadingModel, metallicFactor, roughnessFactor, Material::getIndex(this));
+	mat.shadingMetallicRoughness	= glm::vec4(shadingModel, metallicFactor, roughnessFactor, uvFactor/*Material::getIndex(this)*/);
 	return mat;
 }
 

@@ -21,6 +21,7 @@ public:
 	float metallicFactor{ 1.f };
 	float roughnessFactor{ 1.f };
 	float ior{ 1.f };
+	float uvFactor{ 1.f };
 
 	int diffuseTexture{ -1 };
 	int metallicRoughnessTexture{ -1 };

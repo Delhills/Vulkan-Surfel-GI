@@ -39,6 +39,10 @@ void Scene::create_scene()
 	Material* m_asphalt = new Material();
 	m_asphalt->diffuseTexture = Texture::get_id("asphalt.png");
 	m_asphalt->normalTexture = Texture::get_id("wall_normal_map.png");
+	Material* m_floor = new Material();
+	m_floor->diffuseTexture = Texture::get_id("Stylized_Stone_Floor_001_basecolor.jpg");
+	m_floor->normalTexture = Texture::get_id("Stylized_Stone_Floor_001_normal.jpg");
+	m_floor->uvFactor = 10.0f;
 	Material* m_mirror = new Material();
 	m_mirror->shadingModel = 3;
 	Material* m_glass = new Material();
@@ -51,13 +55,14 @@ void Scene::create_scene()
 	Prefab* p_duck		= Prefab::GET("duck.gltf");
 	//Prefab* p_sphere	= Prefab::GET("sphere.obj");
 	Prefab* p_quad		= Prefab::GET("quad", Mesh::get_quad());
-	p_quad->_root[0]->addMaterial(m_asphalt);
+	p_quad->_root[0]->addMaterial(m_floor);
 	Prefab* p_mirror	= Prefab::GET("cube", Mesh::get_cube());
 	p_mirror->_root[0]->addMaterial(m_mirror);
 	Prefab* p_glass_sphere = Prefab::GET("sphere.obj");
 	p_glass_sphere->_root[0]->addMaterial(m_glass);
 	//Prefab* p_cornell	= Prefab::GET("cornellBox.gltf");
 	Prefab* p_helmet	= Prefab::GET("DamagedHelmet.gltf");
+	Prefab* p_avocado	= Prefab::GET("Avocado.gltf");
 	//Prefab* p_lantern	= Prefab::GET("Lantern.gltf");
 	//Prefab* p_car		= Prefab::GET("scene.gltf");
 	//Prefab* p_box		= Prefab::GET("Box.glb");
@@ -68,7 +73,7 @@ void Scene::create_scene()
 	// ---------------
 	
 	Object* sphere = new Object();
-	sphere->prefab = p_glass_sphere;
+	sphere->prefab = p_avocado;
 	sphere->m_matrix = glm::translate(glm::mat4(1), glm::vec3(5, 5, -5));
 	
 	Object* duck = new Object();

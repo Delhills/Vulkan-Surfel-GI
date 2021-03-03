@@ -45,8 +45,8 @@ void main()
   // Use above results to calculate normal vector
   // Calculate worldPos by using ray information
   const vec3 normal   = v0.normal.xyz * barycentricCoords.x + v1.normal.xyz * barycentricCoords.y + v2.normal.xyz * barycentricCoords.z;
+  //const vec3 tangent  = v0.tangent.xyz * barycentricCoords.x + v1.tangent.xyz * barycentricCoords.y + v2.tangent.xyz * barycentricCoords.z;
   const vec2 uv       = v0.uv.xy * barycentricCoords.x + v1.uv.xy * barycentricCoords.y + v2.uv.xy * barycentricCoords.z;
-  vec3 N              = normalize(model * vec4(normal, 0)).xyz;
   const vec3 worldPos = gl_WorldRayOriginEXT + gl_WorldRayDirectionEXT * gl_HitTEXT;
 
   // Calculate tangent and bitangent
@@ -67,8 +67,10 @@ void main()
   bitangent.y = f * (-deltaUV2.y * edge1.y - deltaUV1.y * edge2.y);
   bitangent.z = f * (-deltaUV2.y * edge1.z - deltaUV1.y * edge2.z);
 
-  vec3 T = normalize(vec3(model * vec4(tangent, 0)));
+  vec3 T = normalize(vec3(model * vec4(tangent,   0)));
   vec3 B = normalize(vec3(model * vec4(bitangent, 0)));
+  vec3 N = normalize(vec3(model * vec4(normal, 0)));
+  //vec3 B = cross(N, T);
 
   mat3 TBN = mat3(T, B, N);
 
@@ -80,9 +82,10 @@ void main()
 
   Material mat    = materials.mat[materialID];
   int shadingMode = int(mat.shadingMetallicRoughness.x);
-  vec3 albedo     = mat.textures.x > -1 ? texture(textures[int(mat.textures.x)], uv).xyz : vec3(1);
-  N               = mat.textures.y > -1 ? TBN * normalize(texture(textures[int(mat.textures.y)], uv).xyz) : N;
-  vec3 emissive   = mat.textures.z > -1 ? texture(textures[int(mat.textures.z)], uv).xyz : vec3(0);
+  float uvFactor = mat.shadingMetallicRoughness.w;
+  vec3 albedo     = mat.textures.x > -1 ? texture(textures[int(mat.textures.x)], uv * uvFactor).xyz : vec3(1);
+  N               = mat.textures.y > -1 ? normalize(TBN * texture(textures[int(mat.textures.y)], uv * uvFactor).xyz) : N;
+  vec3 emissive   = mat.textures.z > -1 ? texture(textures[int(mat.textures.z)], uv * uvFactor).xyz : vec3(0);
 
   // Calculate light influence for each light
   for(int i = 0; i < lightsBuffer.lights.length(); i++)
@@ -138,7 +141,7 @@ void main()
       difColor  = computeDiffuse(mat, N, L) * albedo;
       color    += difColor * light_intensity * light.color.xyz * attenuation * shadowFactor;
       color    += emissive;
-      //color = N;
+      //color     = N;
       prd       = hitPayload(vec4(color, gl_HitTEXT), vec4(1, 1, 1, 0), worldPos, prd.seed);
     }
     else if(shadingMode == 3) // MIRALL

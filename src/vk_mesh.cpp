@@ -91,7 +91,6 @@ Mesh* Mesh::GET(const char* filename)
 	{
 		return _loadedMeshes[name];
 	}
-	//return mesh;
 }
 
 bool Mesh::load_from_obj(const char* filename)
@@ -165,10 +164,31 @@ Mesh* Mesh::get_quad()
 	{
 		Mesh* mesh = new Mesh();
 
-		mesh->_vertices.push_back({ {  1.0f,  1.0f, 0.0f }, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f} });
-		mesh->_vertices.push_back({ { -1.0f,  1.0f, 0.0f }, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f} });
-		mesh->_vertices.push_back({ { -1.0f, -1.0f, 0.0f }, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f, 1.0f}, {0.0f, 0.0f} });
-		mesh->_vertices.push_back({ {  1.0f, -1.0f, 0.0f }, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f, 1.0f}, {1.0f, 0.0f} });
+		mesh->_vertices.push_back({ {  1.0f,  1.0f, 0.0f }, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}, {0.0f, 0.0f, 0.0f, 0.0f} });
+		mesh->_vertices.push_back({ { -1.0f,  1.0f, 0.0f }, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}, {0.0f, 0.0f, 0.0f, 0.0f} });
+		mesh->_vertices.push_back({ { -1.0f, -1.0f, 0.0f }, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f, 1.0f}, {0.0f, 0.0f}, {0.0f, 0.0f, 0.0f, 0.0f} });
+		mesh->_vertices.push_back({ {  1.0f, -1.0f, 0.0f }, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f, 1.0f}, {1.0f, 0.0f}, {0.0f, 0.0f, 0.0f, 0.0f} });
+
+		glm::vec3 edge1 = mesh->_vertices[0].position - mesh->_vertices[1].position;
+		glm::vec3 edge2 = mesh->_vertices[0].position - mesh->_vertices[2].position;
+		glm::vec2 deltaUV1 = mesh->_vertices[0].uv - mesh->_vertices[1].uv;
+		glm::vec2 deltaUV2 = mesh->_vertices[0].uv - mesh->_vertices[2].uv;
+
+		float f = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y);
+		glm::vec3 tangent1, tangent2, bitangent1, bitangent2;
+		tangent1.x = f * (deltaUV2.y * edge1.x - deltaUV1.y * edge2.x);
+		tangent1.y = f * (deltaUV2.y * edge1.y - deltaUV1.y * edge2.y);
+		tangent1.z = f * (deltaUV2.y * edge1.z - deltaUV1.y * edge2.z);
+		mesh->_vertices[1].tangent = glm::vec4(tangent1, 0);
+
+		bitangent1.x = f * (-deltaUV2.x * edge1.x + deltaUV1.x * edge2.x);
+		bitangent1.y = f * (-deltaUV2.x * edge1.y + deltaUV1.x * edge2.y);
+		bitangent1.z = f * (-deltaUV2.x * edge1.z + deltaUV1.x * edge2.z);
+
+		mesh->_vertices[0].tangent = glm::vec4(tangent1, 0);
+		mesh->_vertices[1].tangent = glm::vec4(tangent1, 0);
+		mesh->_vertices[2].tangent = glm::vec4(tangent1, 0);
+		mesh->_vertices[3].tangent = glm::vec4(tangent1, 0);
 
 		mesh->_indices = {0, 1, 2, 2, 3, 0};
 
@@ -190,9 +210,9 @@ Mesh* Mesh::get_triangle()
 		
 		mesh->_vertices.clear();
 
-		mesh->_vertices.push_back({ {  1.f,  1.f, 0.f }, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f} });
-		mesh->_vertices.push_back({ { -1.f,  1.f, 0.f }, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f} });
-		mesh->_vertices.push_back({ {  0.f, -1.f, 0.f }, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f, 1.0f}, {1.0f, 0.0f} });
+		mesh->_vertices.push_back({ {  1.f,  1.f, 0.f }, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}, {0.0f, 0.0f, 0.0f, 0.0f} });
+		mesh->_vertices.push_back({ { -1.f,  1.f, 0.f }, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}, {0.0f, 0.0f, 0.0f, 0.0f} });
+		mesh->_vertices.push_back({ {  0.f, -1.f, 0.f }, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f, 1.0f}, {1.0f, 0.0f}, {0.0f, 0.0f, 0.0f, 0.0f} });
 
 		mesh->_indices = { 0, 1, 2 };
 
@@ -213,35 +233,35 @@ Mesh* Mesh::get_cube()
 
 		mesh->_vertices.clear();
 
-		mesh->_vertices.push_back({ { 1.0,  1.0, -1.0}, {0.0, 0.0, -1.0}, {1.0, 1.0, 1.0}, {1.0, 1.0} });
-		mesh->_vertices.push_back({ {-1.0,  1.0, -1.0}, {0.0, 0.0, -1.0}, {1.0, 1.0, 1.0}, {1.0, 1.0} });
-		mesh->_vertices.push_back({ {-1.0, -1.0, -1.0}, {0.0, 0.0, -1.0}, {1.0, 1.0, 1.0}, {1.0, 1.0} });
-		mesh->_vertices.push_back({ { 1.0, -1.0, -1.0}, {0.0, 0.0, -1.0}, {1.0, 1.0, 1.0}, {1.0, 1.0} });
+		mesh->_vertices.push_back({ { 1.0,  1.0, -1.0}, {0.0, 0.0, -1.0}, {1.0, 1.0, 1.0}, {1.0, 1.0}, {0.0f, 0.0f, 0.0f, 0.0f} });
+		mesh->_vertices.push_back({ {-1.0,  1.0, -1.0}, {0.0, 0.0, -1.0}, {1.0, 1.0, 1.0}, {1.0, 1.0}, {0.0f, 0.0f, 0.0f, 0.0f} });
+		mesh->_vertices.push_back({ {-1.0, -1.0, -1.0}, {0.0, 0.0, -1.0}, {1.0, 1.0, 1.0}, {1.0, 1.0}, {0.0f, 0.0f, 0.0f, 0.0f} });
+		mesh->_vertices.push_back({ { 1.0, -1.0, -1.0}, {0.0, 0.0, -1.0}, {1.0, 1.0, 1.0}, {1.0, 1.0}, {0.0f, 0.0f, 0.0f, 0.0f} });
 
-		mesh->_vertices.push_back({ { 1.0,  1.0,  1.0}, {0.0, 0.0, 1.0}, {1.0, 1.0, 1.0}, {1.0, 1.0} });
-		mesh->_vertices.push_back({ {-1.0,  1.0,  1.0}, {0.0, 0.0, 1.0}, {1.0, 1.0, 1.0}, {1.0, 1.0} });
-		mesh->_vertices.push_back({ {-1.0, -1.0,  1.0}, {0.0, 0.0, 1.0}, {1.0, 1.0, 1.0}, {1.0, 1.0} });
-		mesh->_vertices.push_back({ { 1.0, -1.0,  1.0}, {0.0, 0.0, 1.0}, {1.0, 1.0, 1.0}, {1.0, 1.0} });
+		mesh->_vertices.push_back({ { 1.0,  1.0,  1.0}, {0.0, 0.0, 1.0}, {1.0, 1.0, 1.0}, {1.0, 1.0}, {0.0f, 0.0f, 0.0f, 0.0f} });
+		mesh->_vertices.push_back({ {-1.0,  1.0,  1.0}, {0.0, 0.0, 1.0}, {1.0, 1.0, 1.0}, {1.0, 1.0}, {0.0f, 0.0f, 0.0f, 0.0f} });
+		mesh->_vertices.push_back({ {-1.0, -1.0,  1.0}, {0.0, 0.0, 1.0}, {1.0, 1.0, 1.0}, {1.0, 1.0}, {0.0f, 0.0f, 0.0f, 0.0f} });
+		mesh->_vertices.push_back({ { 1.0, -1.0,  1.0}, {0.0, 0.0, 1.0}, {1.0, 1.0, 1.0}, {1.0, 1.0}, {0.0f, 0.0f, 0.0f, 0.0f} });
 	
-		mesh->_vertices.push_back({ { 1.0,  1.0,  1.0}, {0.0, 1.0, 0.0}, {1.0, 1.0, 1.0}, {1.0, 1.0} });
-		mesh->_vertices.push_back({ {-1.0,  1.0,  1.0}, {0.0, 1.0, 0.0}, {1.0, 1.0, 1.0}, {1.0, 1.0} });
-		mesh->_vertices.push_back({ {-1.0,  1.0, -1.0}, {0.0, 1.0, 0.0}, {1.0, 1.0, 1.0}, {1.0, 1.0} });
-		mesh->_vertices.push_back({ { 1.0,  1.0, -1.0}, {0.0, 1.0, 0.0}, {1.0, 1.0, 1.0}, {1.0, 1.0} });
+		mesh->_vertices.push_back({ { 1.0,  1.0,  1.0}, {0.0, 1.0, 0.0}, {1.0, 1.0, 1.0}, {1.0, 1.0}, {0.0f, 0.0f, 0.0f, 0.0f} });
+		mesh->_vertices.push_back({ {-1.0,  1.0,  1.0}, {0.0, 1.0, 0.0}, {1.0, 1.0, 1.0}, {1.0, 1.0}, {0.0f, 0.0f, 0.0f, 0.0f} });
+		mesh->_vertices.push_back({ {-1.0,  1.0, -1.0}, {0.0, 1.0, 0.0}, {1.0, 1.0, 1.0}, {1.0, 1.0}, {0.0f, 0.0f, 0.0f, 0.0f} });
+		mesh->_vertices.push_back({ { 1.0,  1.0, -1.0}, {0.0, 1.0, 0.0}, {1.0, 1.0, 1.0}, {1.0, 1.0}, {0.0f, 0.0f, 0.0f, 0.0f} });
 	
-		mesh->_vertices.push_back({ { 1.0, -1.0,  1.0}, {0.0, -1.0, 0.0}, {1.0, 1.0, 1.0}, {1.0, 1.0} });
-		mesh->_vertices.push_back({ {-1.0, -1.0,  1.0}, {0.0, -1.0, 0.0}, {1.0, 1.0, 1.0}, {1.0, 1.0} });
-		mesh->_vertices.push_back({ {-1.0, -1.0, -1.0}, {0.0, -1.0, 0.0}, {1.0, 1.0, 1.0}, {1.0, 1.0} });
-		mesh->_vertices.push_back({ { 1.0, -1.0, -1.0}, {0.0, -1.0, 0.0}, {1.0, 1.0, 1.0}, {1.0, 1.0} });
+		mesh->_vertices.push_back({ { 1.0, -1.0,  1.0}, {0.0, -1.0, 0.0}, {1.0, 1.0, 1.0}, {1.0, 1.0}, {0.0f, 0.0f, 0.0f, 0.0f} });
+		mesh->_vertices.push_back({ {-1.0, -1.0,  1.0}, {0.0, -1.0, 0.0}, {1.0, 1.0, 1.0}, {1.0, 1.0}, {0.0f, 0.0f, 0.0f, 0.0f} });
+		mesh->_vertices.push_back({ {-1.0, -1.0, -1.0}, {0.0, -1.0, 0.0}, {1.0, 1.0, 1.0}, {1.0, 1.0}, {0.0f, 0.0f, 0.0f, 0.0f} });
+		mesh->_vertices.push_back({ { 1.0, -1.0, -1.0}, {0.0, -1.0, 0.0}, {1.0, 1.0, 1.0}, {1.0, 1.0}, {0.0f, 0.0f, 0.0f, 0.0f} });
 	
-		mesh->_vertices.push_back({ {-1.0,  1.0,  1.0}, {-1.0, 0.0, 0.0}, {1.0, 1.0, 1.0}, {1.0, 1.0} });
-		mesh->_vertices.push_back({ {-1.0, -1.0,  1.0}, {-1.0, 0.0, 0.0}, {1.0, 1.0, 1.0}, {1.0, 1.0} });
-		mesh->_vertices.push_back({ {-1.0, -1.0, -1.0}, {-1.0, 0.0, 0.0}, {1.0, 1.0, 1.0}, {1.0, 1.0} });
-		mesh->_vertices.push_back({ {-1.0,  1.0, -1.0}, {-1.0, 0.0, 0.0}, {1.0, 1.0, 1.0}, {1.0, 1.0} });
+		mesh->_vertices.push_back({ {-1.0,  1.0,  1.0}, {-1.0, 0.0, 0.0}, {1.0, 1.0, 1.0}, {1.0, 1.0}, {0.0f, 0.0f, 0.0f, 0.0f} });
+		mesh->_vertices.push_back({ {-1.0, -1.0,  1.0}, {-1.0, 0.0, 0.0}, {1.0, 1.0, 1.0}, {1.0, 1.0}, {0.0f, 0.0f, 0.0f, 0.0f} });
+		mesh->_vertices.push_back({ {-1.0, -1.0, -1.0}, {-1.0, 0.0, 0.0}, {1.0, 1.0, 1.0}, {1.0, 1.0}, {0.0f, 0.0f, 0.0f, 0.0f} });
+		mesh->_vertices.push_back({ {-1.0,  1.0, -1.0}, {-1.0, 0.0, 0.0}, {1.0, 1.0, 1.0}, {1.0, 1.0}, {0.0f, 0.0f, 0.0f, 0.0f} });
 	
-		mesh->_vertices.push_back({ {1.0,  1.0,  1.0}, {1.0, 0.0, 0.0}, {1.0, 1.0, 1.0}, {1.0, 1.0} });
-		mesh->_vertices.push_back({ {1.0, -1.0,  1.0}, {1.0, 0.0, 0.0}, {1.0, 1.0, 1.0}, {1.0, 1.0} });
-		mesh->_vertices.push_back({ {1.0, -1.0, -1.0}, {1.0, 0.0, 0.0}, {1.0, 1.0, 1.0}, {1.0, 1.0} });
-		mesh->_vertices.push_back({ {1.0,  1.0, -1.0}, {1.0, 0.0, 0.0}, {1.0, 1.0, 1.0}, {1.0, 1.0} });
+		mesh->_vertices.push_back({ {1.0,  1.0,  1.0}, {1.0, 0.0, 0.0}, {1.0, 1.0, 1.0}, {1.0, 1.0}, {0.0f, 0.0f, 0.0f, 0.0f} });
+		mesh->_vertices.push_back({ {1.0, -1.0,  1.0}, {1.0, 0.0, 0.0}, {1.0, 1.0, 1.0}, {1.0, 1.0}, {0.0f, 0.0f, 0.0f, 0.0f} });
+		mesh->_vertices.push_back({ {1.0, -1.0, -1.0}, {1.0, 0.0, 0.0}, {1.0, 1.0, 1.0}, {1.0, 1.0}, {0.0f, 0.0f, 0.0f, 0.0f} });
+		mesh->_vertices.push_back({ {1.0,  1.0, -1.0}, {1.0, 0.0, 0.0}, {1.0, 1.0, 1.0}, {1.0, 1.0}, {0.0f, 0.0f, 0.0f, 0.0f} });
 
 		mesh->_indices = {
 			0, 1, 2, 2, 3, 0,
@@ -675,6 +695,7 @@ void Prefab::loadNode(const tinygltf::Model& tmodel, const tinygltf::Node& tnode
 				const float* positionBuffer = nullptr;
 				const float* normalsBuffer = nullptr;
 				const float* texCoordsBuffer = nullptr;
+				const float* tangentBuffer = nullptr;
 
 				// Get buffer data for vertex position
 				if (tprimitive.attributes.find("POSITION") != tprimitive.attributes.end()) {
@@ -697,6 +718,13 @@ void Prefab::loadNode(const tinygltf::Model& tmodel, const tinygltf::Node& tnode
 					texCoordsBuffer = reinterpret_cast<const float*>(&(tmodel.buffers[view.buffer].data[accessor.byteOffset + view.byteOffset]));
 				}
 
+				if (tprimitive.attributes.find("TANGENT") != tprimitive.attributes.end())
+				{
+					const tinygltf::Accessor& tangentAccessor = tmodel.accessors[tprimitive.attributes.find("TANGENT")->second];
+					const tinygltf::BufferView& tangentView = tmodel.bufferViews[tangentAccessor.bufferView];
+					tangentBuffer = reinterpret_cast<const float*>(&(tmodel.buffers[tangentView.buffer].data[tangentAccessor.byteOffset + tangentView.byteOffset]));
+				}
+
 				// Append data to model's vertex buffer
 				for (size_t v = 0; v < vertexCount; v++) 
 				{
@@ -706,6 +734,7 @@ void Prefab::loadNode(const tinygltf::Model& tmodel, const tinygltf::Node& tnode
 					vert.normal		= invertNormals ? normal * glm::vec3(-1) : normal;
 					vert.uv			= texCoordsBuffer ? glm::make_vec2(&texCoordsBuffer[v * 2]) : glm::vec3(0.0f);
 					vert.color		= glm::vec3(1.0f);
+					vert.tangent	= tangentBuffer ? glm::vec4(glm::make_vec4(&tangentBuffer[v * 4])) : glm::vec4(0.0f);
 					_mesh->_vertices.push_back(vert);
 				}
 			}
@@ -786,7 +815,7 @@ int Prefab::loadMaterial(const tinygltf::Model& tmodel, const int index)
 		mat->roughnessFactor			= tpbr.roughnessFactor;
 		mat->diffuseTexture				= tpbr.baseColorTexture.index;
 		mat->metallicRoughnessTexture	= tpbr.metallicRoughnessTexture.index;
-		mat->normalTexture				= tmat.normalTexture.index;
+		//mat->normalTexture				= tmat.normalTexture.index;
 	}
 
 	if (Material::exists(mat))
