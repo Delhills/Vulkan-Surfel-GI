@@ -51,7 +51,7 @@ vec3 computeSpecular(Material m, vec3 normal, vec3 lightDir, vec3 viewDir)
     return vec3(1) * specular;
 };
 
-mat3 angleAxis3x3(float angle, vec3 axis)
+mat3 rotMat(vec3 axis, float angle)
 {
     axis = normalize(axis);
     float s = sin(angle);
@@ -79,20 +79,21 @@ vec3 sampleCone(inout uint seed, const vec3 direction, const float angle)
 {
     float cosAngle = cos(angle);
 
-    // This range to [cosTheta, 1]. In case rnd is 1, z will be 1, whereas if rnd is 0, z will be cosTheta.
-    float z = rnd(seed) * (1.0 - cosAngle) + cosAngle;
+    const float a = rnd(seed);
 
-    float phi = rnd(seed) * 2.0 * PI;
-    float x = sqrt(1.0 - z * z) * cos(phi);
-    float y = sqrt(1.0 - z * z) * sin(phi);
-    vec3 north = vec3(0.0, 0.0, 1.0);
+    const float cosTheta    = (1 - a) + a * cosAngle;
+    const float sinTheta    = sqrt(1 - cosTheta * cosTheta);
+    const float phi         = rnd(seed) * 2 * PI;
 
-    vec3 axis = normalize(cross(north, normalize(direction)));
-    float rotAngle = acos(dot(normalize(direction), north));
+    vec3 sampleDirection = vec3(sinTheta * cos(phi), sinTheta * sin(phi), cosTheta);
 
-    mat3 rot = rotationMatrix(axis, rotAngle);
+    const vec3 north        = vec3(0.0, 0.0, 1.0);
+    const vec3 axis         = normalize(cross(north, normalize(direction)));
+    const float rotAngle    = acos(dot(normalize(direction), north));
 
-    return rot * vec3(x, y, z);
+    mat3 rot = rotMat(axis, rotAngle);
+
+    return rot * -sampleDirection;
 }
 
 vec3 getConeSample(inout uint rngState, vec3 direction, float coneAngle) {
@@ -111,7 +112,7 @@ vec3 getConeSample(inout uint rngState, vec3 direction, float coneAngle) {
     float angle = acos(dot(normalize(direction), north));
 
     // Convert rotation axis and angle to 3x3 rotation matrix [2]
-    mat3 R = angleAxis3x3(angle, axis);
+    mat3 R = rotMat(axis, angle);
 
     return R * vec3(x, y, z);
 }

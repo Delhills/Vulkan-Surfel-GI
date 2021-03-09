@@ -89,15 +89,15 @@ void main()
         vec3 toLightEdge = normalize((light.pos.xyz + perpL * light.radius) - worldPos);
         float coneAngle = acos(dot(L, toLightEdge)) * 2.0;
 
-        const vec3 dir = normalize(getConeSample(prd.seed, L, coneAngle));
-
+        //const vec3 dir = normalize(getConeSample(prd.seed, L, coneAngle));
+        const vec3 dir = sampleCone(prd.seed, L, coneAngle);
         //const vec3 dir    = normalize(sampleSphere(prd.seed, light.pos.xyz, light.radius) - worldPos);
         const uint flags  = gl_RayFlagsOpaqueEXT | gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsSkipClosestHitShaderEXT;
         float tmin = 0.001, tmax = light_distance + 100;
         
         // Shadow ray cast
         traceRayEXT(topLevelAS, flags, 0xFF, 1, 0, 1, 
-          worldPos + dir * 5e-2, tmin, -dir, tmax, 1);
+          worldPos + N * 5e-2, tmin, dir, tmax, 1);
 
         if(!shadowed){
           shadowFactor++;
