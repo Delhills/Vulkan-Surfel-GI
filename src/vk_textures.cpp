@@ -94,10 +94,6 @@ bool vkutil::load_image_from_file(VulkanEngine& engine, const char* filename, Al
 
 	});
 
-	engine._mainDeletionQueue.push_function([=]() {
-		vmaDestroyImage(engine._allocator, newImage._image, newImage._allocation);
-	});
-
 	vmaDestroyBuffer(engine._allocator, stagingBuffer._buffer, stagingBuffer._allocation);
 
 	std::cout << "Texture loaded successfully " << filename << std::endl;
@@ -151,6 +147,7 @@ Texture* Texture::GET(const char* filename, const bool cubemap)
 
 	VulkanEngine::engine->_mainDeletionQueue.push_function([=](){
 		vkDestroyImageView(VulkanEngine::engine->_device, t->imageView, nullptr);
+		vmaDestroyImage(VulkanEngine::engine->_allocator, t->image._image, t->image._allocation);
 		});
 
 	return t;
