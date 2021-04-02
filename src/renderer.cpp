@@ -2792,6 +2792,19 @@ void Renderer::build_compute_command_buffer()
 	vkCmdDispatch(cmd, VulkanEngine::engine->_window->getWidth() / 16, VulkanEngine::engine->_window->getHeight() / 16, 1);
 
 	VK_CHECK(vkEndCommandBuffer(cmd));
+
+	// TAA COMMANDS
+	// ------------
+	VkCommandBuffer& taaCmd = _taaCommandBuffer;
+
+	VK_CHECK(vkBeginCommandBuffer(taaCmd, &beginInfo));
+
+	vkCmdBindPipeline(taaCmd, VK_PIPELINE_BIND_POINT_COMPUTE, _taaPipeline);
+	vkCmdBindDescriptorSets(taaCmd, VK_PIPELINE_BIND_POINT_COMPUTE, _taaPipelineLayout, 0, 1, &_taaDescSet, 0, nullptr);
+
+	vkCmdDispatch(taaCmd, VulkanEngine::engine->_window->getWidth() / 16, VulkanEngine::engine->_window->getHeight() / 16, 1);
+
+	VK_CHECK(vkEndCommandBuffer(taaCmd));
 }
 
 // POST
