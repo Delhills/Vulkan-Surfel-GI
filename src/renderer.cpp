@@ -97,6 +97,7 @@ void Renderer::init_commands()
 	VK_CHECK(vkAllocateCommandBuffers(*device, &cmdPostAllocInfo, &_hybridCommandBuffer));
 	VK_CHECK(vkAllocateCommandBuffers(*device, &cmdPostAllocInfo, &_shadowCommandBuffer));
 	VK_CHECK(vkAllocateCommandBuffers(*device, &cmdPostAllocInfo, &_denoiseCommandBuffer));
+	VK_CHECK(vkAllocateCommandBuffers(*device, &cmdPostAllocInfo, &_taaCommandBuffer));
 
 	VulkanEngine::engine->_mainDeletionQueue.push_function([=]() {
 		vkDestroyCommandPool(*device, _commandPool, nullptr);
@@ -835,6 +836,7 @@ void Renderer::init_sync_structures()
 	VK_CHECK(vkCreateSemaphore(*device, &semaphoreCreateInfo, nullptr, &_rtSemaphore));
 	VK_CHECK(vkCreateSemaphore(*device, &semaphoreCreateInfo, nullptr, &_shadowSemaphore));
 	VK_CHECK(vkCreateSemaphore(*device, &semaphoreCreateInfo, nullptr, &_denoiseSemaphore));
+	VK_CHECK(vkCreateSemaphore(*device, &semaphoreCreateInfo, nullptr, &_taaSemaphore));
 
 	for (int i = 0; i < FRAME_OVERLAP; i++)
 	{
@@ -860,6 +862,7 @@ void Renderer::init_sync_structures()
 		vkDestroySemaphore(*device, _rtSemaphore, nullptr);
 		vkDestroySemaphore(*device, _shadowSemaphore, nullptr);
 		vkDestroySemaphore(*device, _denoiseSemaphore, nullptr);
+		vkDestroySemaphore(*device, _taaSemaphore, nullptr);
 		});
 }
 
@@ -1996,10 +1999,10 @@ void Renderer::create_shadow_descriptors()
 		{VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 100},
 		{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 10},
 		{VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 100},
-		{VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1}
+		{VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 10}
 	};
 
-	VkDescriptorPoolCreateInfo descriptorPoolCreateInfo = vkinit::descriptor_pool_create_info(poolSize, 2);
+	VkDescriptorPoolCreateInfo descriptorPoolCreateInfo = vkinit::descriptor_pool_create_info(poolSize, 3);
 	VK_CHECK(vkCreateDescriptorPool(*device, &descriptorPoolCreateInfo, nullptr, &_shadowDescPool));
 
 	// First set
@@ -2114,10 +2117,7 @@ void Renderer::create_shadow_descriptors()
 	});
 
 	// Allocate Descriptor
-	VkDescriptorSetLayoutCreateInfo denoiseDescriptorSetLayoutCreateInfo = {};
-	denoiseDescriptorSetLayoutCreateInfo.sType			= VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-	denoiseDescriptorSetLayoutCreateInfo.bindingCount	= static_cast<uint32_t>(denoiseBindings.size());
-	denoiseDescriptorSetLayoutCreateInfo.pBindings		= denoiseBindings.data();
+	VkDescriptorSetLayoutCreateInfo denoiseDescriptorSetLayoutCreateInfo = vkinit::descriptor_set_layout_create_info(static_cast<uint32_t>(denoiseBindings.size()), denoiseBindings);
 	VK_CHECK(vkCreateDescriptorSetLayout(*device, &denoiseDescriptorSetLayoutCreateInfo, nullptr, &_sPostDescSetLayout));
 
 	VkDescriptorSetAllocateInfo denoiseDescriptorSetAllocateInfo = vkinit::descriptor_set_allocate_info(_shadowDescPool, &_sPostDescSetLayout, 1);
@@ -2150,10 +2150,43 @@ void Renderer::create_shadow_descriptors()
 	};
 
 	vkUpdateDescriptorSets(*device, static_cast<uint32_t>(writeDenoiseDescriptorSets.size()), writeDenoiseDescriptorSets.data(), 0, VK_NULL_HANDLE);
+
+	// TAA DESCRIPTOR
+	// --------------
+	VkDescriptorSetLayoutBinding storageImageBinding = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, VK_SHADER_STAGE_COMPUTE_BIT, 0);
+	VkDescriptorSetLayoutBinding motionTextureBinding = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_COMPUTE_BIT, 1);
+
+	std::vector<VkDescriptorSetLayoutBinding> taaBindings = {
+		storageImageBinding,
+		motionTextureBinding
+	};
+
+	VkDescriptorSetLayoutCreateInfo taaDescSetLayoutCI = vkinit::descriptor_set_layout_create_info(static_cast<uint32_t>(taaBindings.size()), taaBindings);
+	VK_CHECK(vkCreateDescriptorSetLayout(*device, &taaDescSetLayoutCI, nullptr, &_taaDescSetLayout));
+
+	VkDescriptorSetAllocateInfo taaDescSetAllocateInfo = vkinit::descriptor_set_allocate_info(_shadowDescPool, &_taaDescSetLayout, 1);
+	VK_CHECK(vkAllocateDescriptorSets(*device, &taaDescSetAllocateInfo, &_taaDescSet));
+
+	// Binding = 0 Storage Image
+	VkDescriptorImageInfo storageImageInfo = vkinit::descriptor_image_info(_rtImage.imageView, VK_IMAGE_LAYOUT_GENERAL);
+
+	// Binding = 1 Motion Texture
+	VkDescriptorImageInfo motionImageInfo = vkinit::descriptor_image_info(_deferredTextures[3].imageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, _offscreenSampler);
+
+	VkWriteDescriptorSet storageWrite = vkinit::write_descriptor_image(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, _taaDescSet, &storageImageInfo, 0);
+	VkWriteDescriptorSet motionWrite = vkinit::write_descriptor_image(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, _taaDescSet, &motionImageInfo, 1);
+
+	std::vector<VkWriteDescriptorSet> taaWrites = {
+		storageWrite,
+		motionWrite
+	};
+
+	vkUpdateDescriptorSets(*device, static_cast<uint32_t>(taaWrites.size()), taaWrites.data(), 0, VK_NULL_HANDLE);
 	
 	VulkanEngine::engine->_mainDeletionQueue.push_function([=]() {
 		vkDestroyDescriptorSetLayout(*device, _shadowDescSetLayout, nullptr);
 		vkDestroyDescriptorSetLayout(*device, _sPostDescSetLayout, nullptr);
+		vkDestroyDescriptorSetLayout(*device, _taaDescSetLayout, nullptr);
 		vkDestroyDescriptorPool(*device, _shadowDescPool, nullptr);
 		});
 
@@ -2557,12 +2590,29 @@ void Renderer::init_compute_pipeline()
 	
 	VK_CHECK(vkCreateComputePipelines(*device, VK_NULL_HANDLE, 1, &computePipelineCI, nullptr, &_sPostPipeline));
 
-	// Fill the buffer
+	// TAA PIPELINE
+	VkShaderModule taaShaderModule;
+	VulkanEngine::engine->load_shader_module(vkutil::findFile("taa.comp.spv", searchPaths, true).c_str(), &taaShaderModule);
+	VkPipelineShaderStageCreateInfo taaShaderStageCI = vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_COMPUTE_BIT, taaShaderModule);
+
+	VkPipelineLayoutCreateInfo taaPipelineLayoutCI = vkinit::pipeline_layout_create_info();
+	taaPipelineLayoutCI.setLayoutCount	= 1;
+	taaPipelineLayoutCI.pSetLayouts		= &_taaDescSetLayout;
+	VK_CHECK(vkCreatePipelineLayout(*device, &taaPipelineLayoutCI, nullptr, &_taaPipelineLayout));
+
+	VkComputePipelineCreateInfo taaPipelineCI = {};
+	taaPipelineCI.sType		= VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+	taaPipelineCI.stage		= taaShaderStageCI;
+	taaPipelineCI.layout	= _taaPipelineLayout;
+	VK_CHECK(vkCreateComputePipelines(*device, VK_NULL_HANDLE, 1, &taaPipelineCI, nullptr, &_taaPipeline));
 
 	vkDestroyShaderModule(*device, computeShaderModule, nullptr);
+	vkDestroyShaderModule(*device, taaShaderModule, nullptr);
 	VulkanEngine::engine->_mainDeletionQueue.push_function([=]() {
 		vkDestroyPipeline(*device, _sPostPipeline, nullptr);
+		vkDestroyPipeline(*device, _taaPipeline, nullptr);
 		vkDestroyPipelineLayout(*device, _sPostPipelineLayout, nullptr);
+		vkDestroyPipelineLayout(*device, _taaPipelineLayout, nullptr);
 		});
 }
 

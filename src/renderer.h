@@ -184,6 +184,14 @@ public:
 	VkSemaphore					_denoiseSemaphore;
 	AllocatedBuffer				_denoiseFrameBuffer;
 
+	// TAA POST VARIABLES
+	VkPipeline					_taaPipeline;
+	VkPipelineLayout			_taaPipelineLayout;
+	VkDescriptorSet				_taaDescSet;
+	VkDescriptorSetLayout		_taaDescSetLayout;
+	VkSemaphore					_taaSemaphore;
+	VkCommandBuffer				_taaCommandBuffer;
+
 	void rasterize();
 
 	void render();
