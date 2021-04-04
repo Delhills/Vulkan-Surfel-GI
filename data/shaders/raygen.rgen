@@ -65,16 +65,4 @@ void main()
 	finalColor /= NSAMPLES;
 
 	imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(finalColor, 1.0));
-	/*
-	if(frame < 0.0)
-	{
-		imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(finalColor, 1.0));
-	}
-	else{
-		float a = 1.0 / float(1.0 + frame);
-		vec3 lastColor = imageLoad(image, ivec2(gl_LaunchIDEXT.xy)).xyz;
-		finalColor = mix(finalColor, lastColor, a);
-		imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(finalColor, 1.0));
-	}
-	*/
 }

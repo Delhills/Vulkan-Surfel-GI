@@ -514,10 +514,17 @@ void Renderer::raytrace()
 
 	VK_CHECK(vkQueueSubmit(VulkanEngine::engine->_graphicsQueue, 1, &submit, VK_NULL_HANDLE));
 
+	// TAA Pass
+	submit.pWaitSemaphores		= &_rtSemaphore;
+	submit.pSignalSemaphores	= &_taaSemaphore;
+	submit.pCommandBuffers		= &_taaCommandBuffer;
+
+	VK_CHECK(vkQueueSubmit(VulkanEngine::engine->_graphicsQueue, 1, &submit, VK_NULL_HANDLE));
+
 	// Post pass
 	build_post_command_buffers();
 
-	submit.pWaitSemaphores		= &_rtSemaphore;
+	submit.pWaitSemaphores		= &_taaSemaphore;
 	submit.pSignalSemaphores	= &get_current_frame()._renderSemaphore;
 	submit.pCommandBuffers		= &get_current_frame()._mainCommandBuffer;
 

@@ -102,16 +102,17 @@ void main()
 			{
         // Init as shadowed
 				shadowed 	        = true;
-        float pointRadius = light.radius * sqrt(rnd(prd.seed));
+        float point       = light.radius * sqrt(rnd(prd.seed));
         float angle       = rnd(prd.seed) * 2.0f * PI;
-        vec2 diskPoint    = vec2(pointRadius * cos(angle), pointRadius * sin(angle));
-        vec3 lTangent     = normalize(cross(L, vec3(0, 1, 0)));
-        vec3 lBitangent   = normalize(cross(lTangent, L));
-        vec3 target       = worldPos + L + diskPoint.x * lTangent + diskPoint.y * lBitangent;
+        vec2 diskPoint    = vec2(point * cos(angle), point * sin(angle));
+        vec3 tangent      = normalize(cross(L, vec3(0, 1, 0)));
+        vec3 bitangent    = normalize(cross(tangent, L));
+        vec3 target       = worldPos + L + diskPoint.x * tangent + diskPoint.y * bitangent;
+
         vec3 dir          = normalize(target - worldPos);
         const uint flags  = gl_RayFlagsOpaqueEXT | gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsSkipClosestHitShaderEXT;
-        // Shadow ray cast
 				float tmin = 0.001, tmax  = light_distance + 1;
+        // Shadow ray cast
 				traceRayEXT(topLevelAS, flags, 0xff, 1, 0, 1, 
           worldPos.xyz + dir * 1e-2, tmin, dir, tmax, 1);
 
