@@ -191,6 +191,7 @@ public:
 	VkDescriptorSetLayout		_taaDescSetLayout;
 	VkSemaphore					_taaSemaphore;
 	VkCommandBuffer				_taaCommandBuffer;
+	Texture						_taaTexture;
 
 	void rasterize();
 

@@ -24,7 +24,7 @@ void VulkanEngine::init()
 {
 	_mode =	HYBRID;
 
-	_window->init("Vulkan Pinut", 1700, 900);
+	_window->init("Vulkan Pinut", 1920, 1080);
 
 	searchPaths = {
 		"data/shaders/output",

@@ -1631,6 +1631,8 @@ void Renderer::create_storage_image()
 
 	_shadowImages.reserve(_scene->_lights.size());
 
+	bool created = false;
+
 	for (decltype(_scene->_lights.size()) i = 0; i < _scene->_lights.size(); i++)
 	{
 		Texture image, denoisedImage;
@@ -1645,6 +1647,14 @@ void Renderer::create_storage_image()
 		VkImageViewCreateInfo denoiseImageViewInfo = vkinit::image_view_create_info(VK_FORMAT_B8G8R8A8_UNORM, denoisedImage.image._image, VK_IMAGE_ASPECT_COLOR_BIT);
 		VK_CHECK(vkCreateImageView(*device, &denoiseImageViewInfo, nullptr, &denoisedImage.imageView));
 		_denoisedImages.emplace_back(denoisedImage);
+
+		if (!created) {
+			vmaCreateImage(VulkanEngine::engine->_allocator, &imageInfo, &allocInfo,
+				&_taaTexture.image._image, &_taaTexture.image._allocation, nullptr);
+			VkImageViewCreateInfo taaImageViewInfo = vkinit::image_view_create_info(VK_FORMAT_B8G8R8A8_UNORM, _taaTexture.image._image, VK_IMAGE_ASPECT_COLOR_BIT);
+			VK_CHECK(vkCreateImageView(*device, &taaImageViewInfo, nullptr, &_taaTexture.imageView));
+			created = true;
+		}
 	}
 
 	VulkanEngine::engine->immediate_submit([&](VkCommandBuffer cmd) {
@@ -1690,9 +1700,24 @@ void Renderer::create_storage_image()
 		vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, nullptr, 0, nullptr, _shadowImages.size(), denoisedBarriers.data());
 	});
 
+	VulkanEngine::engine->immediate_submit([&](VkCommandBuffer cmd) {
+		VkImageMemoryBarrier imageMemoryBarrier{};
+		imageMemoryBarrier.sType			= VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+		imageMemoryBarrier.image			= _taaTexture.image._image;
+		imageMemoryBarrier.oldLayout		= VK_IMAGE_LAYOUT_UNDEFINED;
+		imageMemoryBarrier.newLayout		= VK_IMAGE_LAYOUT_GENERAL;
+		imageMemoryBarrier.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+
+		VkImageMemoryBarrier barrier[] = { imageMemoryBarrier };
+
+		vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, nullptr, 0, nullptr, 1, barrier);
+		});
+
 	VulkanEngine::engine->_mainDeletionQueue.push_function([=]() {
 		vmaDestroyImage(VulkanEngine::engine->_allocator, _rtImage.image._image, _rtImage.image._allocation);
+		vmaDestroyImage(VulkanEngine::engine->_allocator, _taaTexture.image._image, _taaTexture.image._allocation);
 		vkDestroyImageView(*device, _rtImage.imageView, nullptr);
+		vkDestroyImageView(*device, _taaTexture.imageView, nullptr);
 		for (int i = 0; i < _shadowImages.size(); i++)
 		{
 			vmaDestroyImage(VulkanEngine::engine->_allocator, _shadowImages[i].image._image, _shadowImages[i].image._allocation);
@@ -2160,10 +2185,12 @@ void Renderer::create_shadow_descriptors()
 	// TAA DESCRIPTOR
 	// --------------
 	VkDescriptorSetLayoutBinding storageImageBinding = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, VK_SHADER_STAGE_COMPUTE_BIT, 0);
-	VkDescriptorSetLayoutBinding motionTextureBinding = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_COMPUTE_BIT, 1);
+	VkDescriptorSetLayoutBinding outputImageBinding = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, VK_SHADER_STAGE_COMPUTE_BIT, 1);
+	VkDescriptorSetLayoutBinding motionTextureBinding = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_COMPUTE_BIT, 2);
 
 	std::vector<VkDescriptorSetLayoutBinding> taaBindings = {
 		storageImageBinding,
+		outputImageBinding,
 		motionTextureBinding
 	};
 
@@ -2176,14 +2203,19 @@ void Renderer::create_shadow_descriptors()
 	// Binding = 0 Storage Image
 	VkDescriptorImageInfo storageImageInfo = vkinit::descriptor_image_info(_rtImage.imageView, VK_IMAGE_LAYOUT_GENERAL);
 
-	// Binding = 1 Motion Texture
+	// Binding = 1 Output Image
+	VkDescriptorImageInfo outputImageInfo = vkinit::descriptor_image_info(_taaTexture.imageView, VK_IMAGE_LAYOUT_GENERAL);
+
+	// Binding = 2 Motion Texture
 	VkDescriptorImageInfo motionImageInfo = vkinit::descriptor_image_info(_deferredTextures[3].imageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, _offscreenSampler);
 
 	VkWriteDescriptorSet storageWrite = vkinit::write_descriptor_image(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, _taaDescSet, &storageImageInfo, 0);
-	VkWriteDescriptorSet motionWrite = vkinit::write_descriptor_image(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, _taaDescSet, &motionImageInfo, 1);
+	VkWriteDescriptorSet outputWrite = vkinit::write_descriptor_image(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, _taaDescSet, &outputImageInfo, 1);
+	VkWriteDescriptorSet motionWrite = vkinit::write_descriptor_image(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, _taaDescSet, &motionImageInfo, 2);
 
 	std::vector<VkWriteDescriptorSet> taaWrites = {
 		storageWrite,
+		outputWrite,
 		motionWrite
 	};
 
@@ -2808,7 +2840,7 @@ void Renderer::build_compute_command_buffer()
 	vkCmdBindPipeline(taaCmd, VK_PIPELINE_BIND_POINT_COMPUTE, _taaPipeline);
 	vkCmdBindDescriptorSets(taaCmd, VK_PIPELINE_BIND_POINT_COMPUTE, _taaPipelineLayout, 0, 1, &_taaDescSet, 0, nullptr);
 
-	vkCmdDispatch(taaCmd, VulkanEngine::engine->_window->getWidth() / 16, VulkanEngine::engine->_window->getHeight() / 16, 1);
+	vkCmdDispatch(taaCmd, VulkanEngine::engine->_window->getWidth(), VulkanEngine::engine->_window->getHeight(), 1);
 
 	VK_CHECK(vkEndCommandBuffer(taaCmd));
 }
@@ -2998,7 +3030,7 @@ void Renderer::create_post_descriptor()
 		vkAllocateDescriptorSets(*device, &allocInfo, &_frames[i].postDescriptorSet);
 
 		VkDescriptorImageInfo postDescriptor = vkinit::descriptor_image_info(
-			_rtImage.imageView, VK_IMAGE_LAYOUT_GENERAL, _offscreenSampler);	// final image from rtx
+			_taaTexture.imageView, VK_IMAGE_LAYOUT_GENERAL, _offscreenSampler);	// final image from rtx
 
 		std::vector<VkWriteDescriptorSet> writes = {
 			vkinit::write_descriptor_image(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, _frames[i].postDescriptorSet, &postDescriptor, 0),
