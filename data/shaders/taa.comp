@@ -11,7 +11,22 @@ layout (binding = 3) uniform FrameCount {int frame;} frameBuffer;
 
 void main()
 {
-	vec4 old = imageLoad(inputImage, ivec2(gl_GlobalInvocationID.xy));
-	//vec4 old = texture(motionTexture, ivec2(0, 0));//ivec2(gl_GlobalInvocationID.xy));
-	imageStore(outputImage, ivec2(gl_GlobalInvocationID.xy), old);
+	int frame = frameBuffer.frame;
+
+	vec3 new = imageLoad(inputImage, ivec2(gl_GlobalInvocationID.xy)).rgb;
+
+	if(frame > 0)
+	{
+		if( frame > 64 )
+			return;
+
+		float a = 1.0 / float(frame + 1);
+		vec3 old = imageLoad(outputImage, ivec2(gl_GlobalInvocationID.xy)).rgb;
+		vec3 color = mix(old, new, a);
+		imageStore(outputImage, ivec2(gl_GlobalInvocationID.xy), vec4(color, 1));
+	}
+	else
+	{
+		imageStore(outputImage, ivec2(gl_GlobalInvocationID.xy), vec4(new, 1));
+	}
 }

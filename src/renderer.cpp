@@ -2187,11 +2187,13 @@ void Renderer::create_shadow_descriptors()
 	VkDescriptorSetLayoutBinding storageImageBinding = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, VK_SHADER_STAGE_COMPUTE_BIT, 0);
 	VkDescriptorSetLayoutBinding outputImageBinding = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, VK_SHADER_STAGE_COMPUTE_BIT, 1);
 	VkDescriptorSetLayoutBinding motionTextureBinding = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_COMPUTE_BIT, 2);
+	VkDescriptorSetLayoutBinding frameCountBinding = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT, 3);
 
 	std::vector<VkDescriptorSetLayoutBinding> taaBindings = {
 		storageImageBinding,
 		outputImageBinding,
-		motionTextureBinding
+		motionTextureBinding,
+		frameCountBinding
 	};
 
 	VkDescriptorSetLayoutCreateInfo taaDescSetLayoutCI = vkinit::descriptor_set_layout_create_info(static_cast<uint32_t>(taaBindings.size()), taaBindings);
@@ -2209,14 +2211,20 @@ void Renderer::create_shadow_descriptors()
 	// Binding = 2 Motion Texture
 	VkDescriptorImageInfo motionImageInfo = vkinit::descriptor_image_info(_deferredTextures[3].imageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, _offscreenSampler);
 
+	// Binding = 3 Frame count
+	VulkanEngine::engine->create_buffer(sizeof(int), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU, _frameCountBuffer);
+	VkDescriptorBufferInfo frameCountDescInfo = vkinit::descriptor_buffer_info(_frameCountBuffer._buffer, sizeof(int));
+
 	VkWriteDescriptorSet storageWrite = vkinit::write_descriptor_image(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, _taaDescSet, &storageImageInfo, 0);
 	VkWriteDescriptorSet outputWrite = vkinit::write_descriptor_image(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, _taaDescSet, &outputImageInfo, 1);
 	VkWriteDescriptorSet motionWrite = vkinit::write_descriptor_image(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, _taaDescSet, &motionImageInfo, 2);
+	VkWriteDescriptorSet frameWrite = vkinit::write_descriptor_buffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, _taaDescSet, &frameCountDescInfo, 3);
 
 	std::vector<VkWriteDescriptorSet> taaWrites = {
 		storageWrite,
 		outputWrite,
-		motionWrite
+		motionWrite,
+		frameWrite
 	};
 
 	vkUpdateDescriptorSets(*device, static_cast<uint32_t>(taaWrites.size()), taaWrites.data(), 0, VK_NULL_HANDLE);
