@@ -7,6 +7,7 @@ const int NSAMPLES = 1;
 const int SHADOWSAMPLES = 64;
 const int MAX_RECURSION = 8;
 
+
 // STRUCTS --------------------
 struct Vertex
 {

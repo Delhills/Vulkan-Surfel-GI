@@ -19,6 +19,7 @@ layout (set = 0, binding = 5) uniform debugInfo {int target;} debug;
 layout (set = 0, binding = 6) uniform sampler2D materialTexture;
 layout (set = 0, binding = 8) uniform sampler2D emissiveTexture;
 layout (set = 0, binding = 9) uniform sampler2D environmentTexture;
+layout (set = 0, binding = 10) uniform sampler2D debugGI;
 
 const float PI = 3.14159265359;
 
@@ -35,6 +36,9 @@ void main()
 	vec3 motion		= texture(motionTexture, inUV).xyz * 2.0 - vec3(1);
 	vec3 material 	= texture(materialTexture, inUV).xyz;
 	vec3 emissive 	= texture(emissiveTexture, inUV).xyz;
+
+	vec3 debugGI 	= texture(debugGI, inUV).xyx;
+
 	bool background = texture(positionTexture, inUV).w == 0 && texture(normalTexture, inUV).w == 0;
 	float metallic 	= material.z;
 	float roughness = material.y;
@@ -129,7 +133,12 @@ void main()
 	else{
 		color = albedo;
 	}
+	if(debugGI.x != 0){
+		outFragColor = vec4(debugGI, 1.0f );
+		return;
+	}
 	outFragColor = vec4( color, 1.0f );
+
 }
 
 float DistributionGGX(vec3 N, vec3 H, float roughness)

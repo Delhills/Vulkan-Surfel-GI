@@ -1,0 +1,37 @@
+#version 450
+
+#extension GL_EXT_nonuniform_qualifier : enable
+#extension GL_EXT_scalar_block_layout : enable
+
+const int SIZE = 9;
+const int NLIGHTS = 3;
+
+const int WIDTH = 1700;
+const int HEIGHT = 900;
+
+layout (local_size_x = 16, local_size_y = 16) in;
+
+layout(push_constant) uniform constants
+{
+	int x;
+}pushC;
+
+struct Surfel
+{
+	vec3 position;
+	int normal;
+	vec3 color;
+	float radius;
+};
+
+layout (binding = 0) buffer FrameCount {
+	Surfel surfels[];
+} frameBuffer;
+
+void main()
+{	
+	frameBuffer.surfels[16 * gl_GlobalInvocationID.x + gl_GlobalInvocationID.y].position = gl_LocalInvocationID; //vec3(pushC.x, pushC.x, pushC.x);
+	frameBuffer.surfels[16 * gl_GlobalInvocationID.x + gl_GlobalInvocationID.y].normal = pushC.x;
+	frameBuffer.surfels[16 * gl_GlobalInvocationID.x + gl_GlobalInvocationID.y].color = vec3(pushC.x, pushC.x, pushC.x);
+	frameBuffer.surfels[16 * gl_GlobalInvocationID.x + gl_GlobalInvocationID.y].radius = 1.0;
+}

@@ -18,7 +18,8 @@ struct ObjectData{
 	mat4 model;
 };
 
-// Set 0 - Camera information
+// Set 0 - 
+information
 layout(set = 0, binding = 0) uniform CameraBuffer
 {
 	mat4 view;

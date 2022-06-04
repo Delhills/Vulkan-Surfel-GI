@@ -1,0 +1,72 @@
+#version 450
+
+#extension GL_EXT_nonuniform_qualifier : enable
+#extension GL_EXT_scalar_block_layout : enable
+#extension GL_EXT_shader_atomic_float : enable
+
+#include "bitwise.glsl"
+#include "surfelGIutils.glsl"
+
+const int WIDTH = 1712;
+const int HEIGHT = 912;
+
+const vec2 clipConversion = vec2(1/WIDTH, 2/HEIGHT);
+
+layout (local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+// layout(push_constant) uniform constants
+// {
+// 	vec3 a;
+// }pushC;
+
+layout (binding = 0) buffer SurfelBuffer {
+	Surfel surfelInBuffer[];
+} surfels;
+
+layout (binding = 1) buffer StatsBuffer {uint stats[8];} statsBuffer;
+layout (binding = 2) buffer GridBuffer {
+	SurfelGridCell cells[];
+} gridcells;
+
+layout (binding = 3) buffer CellBuffer {uint cell[];} surfelcells;
+
+layout (binding = 4) uniform CameraBuffer
+{
+	mat4 view;
+    mat4 projection;
+	mat4 prevView;
+	mat4 prevProj;
+	vec3 pos;
+} cameraData;
+
+void main()
+{	
+	uint surfel_count = statsBuffer.stats[0];
+	if (gl_GlobalInvocationID.x  >= surfel_count)
+	{
+		return;
+	}
+
+	uint surfel_index = gl_GlobalInvocationID.x;
+	Surfel surfel = surfels.surfelInBuffer[surfel_index];
+
+	vec3 campos = cameraData.pos;
+
+	//vec3 campos = vec3(0.0, 5.0, -10);
+
+	ivec3 center_cell = surfel_cell(ivec3(surfel.position), campos);
+	for (uint i = 0; i < 27; ++i)
+	{
+		ivec3 gridpos = ivec3(center_cell + surfel_neighbor_offsets[i]);
+
+		if(surfel_cellintersects(surfel, gridpos, campos))
+		{
+			uint cellindex = surfel_cellindex(gridpos);
+			uint previous;
+			previous = atomicAdd(gridcells.cells[cellindex].count, 1);
+			surfelcells.cell[gridcells.cells[gl_GlobalInvocationID.x].offset + previous] = surfel_index;
+			
+		}
+	}
+	
+}

@@ -51,6 +51,9 @@ struct GPUCameraData
 	glm::mat4 projection;
 	glm::mat4 prevView;
 	glm::mat4 prevProj;
+	glm::vec3 pos;
+	float near;
+	float far;
 };
 
 struct RTCameraData
@@ -166,9 +169,13 @@ public:
 	VkPhysicalDeviceRayTracingPipelineFeaturesKHR		enabledRayTracingPipelineFeatures{};
 	VkPhysicalDeviceAccelerationStructureFeaturesKHR	enabledAccelerationStructureFeatures{};
 
+
+
 	PFN_vkGetBufferDeviceAddressKHR						vkGetBufferDeviceAddressKHR;
 
 	VkCommandPool	_commandPool;
+
+	VkCommandPool	_commandPool2;
 
 	AllocatedBuffer transformBuffer;
 	   
@@ -182,6 +189,10 @@ public:
 	void update(const float dt);
 
 	void immediate_submit(std::function<void(VkCommandBuffer)>&& function);
+
+	VkCommandBuffer beginSingleTimeCommands();
+
+	void endSingleTimeCommands(VkCommandBuffer commandBuffer);
 
 	void create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage, AllocatedBuffer &buffer, bool destroy = true);
 
@@ -203,6 +214,8 @@ public:
 	void updateFrame();
 
 	void resetFrame();
+
+	uint32_t getMemoryType(uint32_t typeBits, VkMemoryPropertyFlags properties, VkBool32* memTypeFound);
 
 private:
 

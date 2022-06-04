@@ -6,6 +6,7 @@
 
 #include "raycommon.glsl"
 #include "helpers.glsl"
+#include "surfelGIutils.glsl"
 
 layout (set = 0, binding = 0) uniform accelerationStructureEXT topLevelAS;
 layout (set = 0, binding = 1, rgba8) uniform image2D image;
@@ -21,13 +22,40 @@ layout (set = 0, binding = 9) buffer MaterialBuffer { Material mat[]; } material
 layout (set = 0, binding = 10) uniform sampler2D[] environmentTexture;
 layout (set = 0, binding = 12, rgba8) uniform readonly image2D[] shadowImage; 
 
+// INPUT SURFEL BUFFER
+// INPUT STATS BUFFER
+// INPUT GRID BUFFER
+// INPUT CELL BUFFER
+// INPUT SURFEL DATA BUFFER
+
 layout(location = 0) rayPayloadEXT hitPayload prd;
 layout(location = 1) rayPayloadEXT bool isShadowed;
 
+layout (local_size_x = SURFEL_INDIRECT_NUMTHREADS, local_size_y = 1, local_size_z = 1) in;
+
+
 void main()
 {
+
+	uint surfel_count = statsBuffer.stats[0];
+
+	if (gl_LaunchIDEXT.x  >= surfel_count)
+	{
+		return;
+	}
+
+	int surfel_index = int(gl_GlobalInvocationID.x);
+
+	SurfelData surfel_data = surfelsData.surfelDataInBuffer[surfel_index];
+	Surfel surfel = surfels.surfelInBuffer[surfel_index];
+	
+	vec3 n = normalize(surfel.normal);
+
 	uint frame = int(cam.frame.x);
 	prd.seed = tea(gl_LaunchIDEXT.y * gl_LaunchSizeEXT.x + gl_LaunchIDEXT.x, frame);
+
+	float seed = 0.123456;
+	vec2 uv = vec2(frac(frame / 4096.0), (float)surfel_index / SURFEL_CAPACITY);
 
     const vec2 pixelCenter	= vec2(gl_LaunchIDEXT.xy) + vec2(0.5);	// gl_LaunchIDEXT represents the floating-point pixel coordinates normalized between 0 and 1
 	const vec2 inUV 		= pixelCenter/vec2(gl_LaunchSizeEXT.xy);	//gl_LaunchSizeExt is the image size provided in the traceRayEXT function
@@ -63,13 +91,22 @@ void main()
 	float tmax 				= 1000.0;
 
 	vec3 finalColor 		= vec3(0);
-	vec3 origin 			= vec3(0);
-	vec3 direction 			= vec3(0);
+	vec3 origin 			= surfel.position;
+	vec3 direction 			= vec3(0); //el sample cos ese
 	float attenuation 		= 1.0;
 	float shadowFactor		= 0.0;
+	vec3 rayColor = vec3(0.0);
+
+	traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, origin.xyz + direction * 1e-2, tmin, direction, tmax, 0);
+
+	vec3 result = 0;
+	vec3 energy = 1;
+
+	rayColor *= prd.colorAndDist.xyz;
+	const float hitDistance = prd.colorAndDist.w;
+
 
 	// Calculate the light influence for each light
-	vec3 rayColor = vec3(0.0);
 	for(int i = 0; i < lightsBuffer.lights.length(); i++)
 	{
 		Light light 					= lightsBuffer.lights[i];

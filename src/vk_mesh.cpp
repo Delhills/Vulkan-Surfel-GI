@@ -10,7 +10,7 @@
 #define TINYGLTF_IMPLEMENTATION
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "tiny_gltf.h"
+#include "tinygltf/tiny_gltf.h"
 
 extern std::vector<std::string> searchPaths;
 std::unordered_map<std::string, Mesh*> Mesh::_loadedMeshes;
@@ -286,7 +286,7 @@ void Mesh::create_vertex_buffer()
 	vmaUnmapMemory(VulkanEngine::engine->_allocator, stagingBuffer._allocation);
 
 	VkBufferCreateInfo vertexBufferInfo = vkinit::buffer_create_info(bufferSize,
-		VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT);
+		VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR);
 
 	vmaAllocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
 
@@ -335,7 +335,7 @@ void Mesh::create_index_buffer()
 	vmaAllocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
 
 	VkBufferCreateInfo indexBufferInfo = vkinit::buffer_create_info(bufferSize,
-		VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
+		VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR);
 
 	VK_CHECK(vmaCreateBuffer(VulkanEngine::engine->_allocator, &indexBufferInfo, &vmaAllocInfo,
 		&_indexBuffer._buffer,

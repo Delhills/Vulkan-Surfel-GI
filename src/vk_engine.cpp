@@ -1,7 +1,7 @@
 
 #include "vk_engine.h"
 
-#include "VkBootstrap.h"
+#include "vkbootstrap/VkBootstrap.h"
 #include "vk_initializers.h"
 #include "vk_textures.h"
 #include "window.h"
@@ -22,9 +22,9 @@ VulkanEngine::VulkanEngine()
 
 void VulkanEngine::init()
 {
-	_mode =	RAYTRACING;
+	_mode =	DEFERRED;
 
-	_window->init("Vulkan Pinut", 1700, 900);
+	_window->init("Vulkan Pinut", 1712, 912);
 
 	searchPaths = {
 		"data/shaders/output",
@@ -42,14 +42,14 @@ void VulkanEngine::init()
 	init_upload_commands();
 
 	_scene = new Scene();
-	_scene->create_scene(1);
+	_scene->create_scene(0);
 
-	// Add necessary features to the engine
 	init_ray_tracing();
 
+	// Add necessary features to the engine
 	renderer = new Renderer(_scene);
 
-	init_imgui();
+	//init_imgui();
 
 	mouse_locked = false;
 	SDL_ShowCursor(!mouse_locked);
@@ -99,6 +99,7 @@ void VulkanEngine::run()
 		double dt = (currentTime - lastFrame);
 		lastFrame = currentTime;
 
+
 		while (SDL_PollEvent(&e) != 0)
 		{
 			if (e.type == SDL_QUIT) _bQuit = true;
@@ -107,17 +108,11 @@ void VulkanEngine::run()
 
 		update(dt);
 
-		renderer->render_gui();
+		//renderer->render_gui();
 		switch (_mode)
 		{
 		case DEFERRED:
 			renderer->render();
-			break;
-		case RAYTRACING:
-			renderer->raytrace();
-			break;
-		case HYBRID:
-			renderer->rasterize_hybrid();
 			break;
 		default:
 			break;
@@ -164,27 +159,27 @@ void VulkanEngine::update(const float dt)
 	vmaUnmapMemory(_allocator, renderer->_lightBuffer._allocation);
 
 	// Shadow samples
-	void* samplesData;
-	vmaMapMemory(_allocator, renderer->_shadowSamplesBuffer._allocation, &samplesData);
-	std::memcpy(samplesData, &_samples, sizeof(int));
-	vmaUnmapMemory(_allocator, renderer->_shadowSamplesBuffer._allocation);
+	//void* samplesData;
+	//vmaMapMemory(_allocator, renderer->_shadowSamplesBuffer._allocation, &samplesData);
+	//std::memcpy(samplesData, &_samples, sizeof(int));
+	//vmaUnmapMemory(_allocator, renderer->_shadowSamplesBuffer._allocation);
 
-	// TODO: MEMORY LEAK and update only when instances changed
-	// Rebuild instances matrix for TLAS
-	int instanceIndex = 0;
-	renderer->_tlas.clear();
-	for (Object* obj : _scene->_entities)
-	{
-		if (!obj->prefab->_root.empty())
-		{
-			for (Node* root : obj->prefab->_root)
-			{
-				root->node_to_instance(renderer->_tlas, instanceIndex, obj->m_matrix);
-			}
-		}
-	}
-	
-	renderer->buildTlas(renderer->_tlas, VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR | VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT_KHR, true);	
+	//// TODO: MEMORY LEAK and update only when instances changed
+	//// Rebuild instances matrix for TLAS
+	//int instanceIndex = 0;
+	//renderer->_tlas.clear();
+	//for (Object* obj : _scene->_entities)
+	//{
+	//	if (!obj->prefab->_root.empty())
+	//	{
+	//		for (Node* root : obj->prefab->_root)
+	//		{
+	//			root->node_to_instance(renderer->_tlas, instanceIndex, obj->m_matrix);
+	//		}
+	//	}
+	//}
+	//
+	//renderer->buildTlas(renderer->_tlas, VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR | VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT_KHR, true);	
 }
 
 void VulkanEngine::immediate_submit(std::function<void(VkCommandBuffer cmd)>&& function)
@@ -204,12 +199,48 @@ void VulkanEngine::immediate_submit(std::function<void(VkCommandBuffer cmd)>&& f
 	VkSubmitInfo submit = vkinit::submit_info(&cmd);
 
 	VK_CHECK(vkQueueSubmit(_graphicsQueue, 1, &submit, _uploadContext._uploadFence));
+	vkQueueWaitIdle(_graphicsQueue);
 
-	vkWaitForFences(_device, 1, &_uploadContext._uploadFence, VK_TRUE, 1000000000);
+	vkWaitForFences(_device, 1, &_uploadContext._uploadFence, VK_TRUE, UINT64_MAX);
 	vkResetFences(_device, 1, &_uploadContext._uploadFence);
 
 	vkResetCommandPool(_device, _uploadContext._commandPool, 0);
 }
+
+
+VkCommandBuffer VulkanEngine::beginSingleTimeCommands() {
+	VkCommandBufferAllocateInfo allocInfo{};
+	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	allocInfo.commandPool = _commandPool2;
+	allocInfo.commandBufferCount = 1;
+
+	VkCommandBuffer commandBuffer;
+	vkAllocateCommandBuffers(_device, &allocInfo, &commandBuffer);
+
+	VkCommandBufferBeginInfo beginInfo{};
+	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+	vkBeginCommandBuffer(commandBuffer, &beginInfo);
+
+	return commandBuffer;
+}
+
+void VulkanEngine::endSingleTimeCommands(VkCommandBuffer commandBuffer) {
+	vkEndCommandBuffer(commandBuffer);
+
+	VkSubmitInfo submitInfo{};
+	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	submitInfo.commandBufferCount = 1;
+	submitInfo.pCommandBuffers = &commandBuffer;
+
+	vkQueueSubmit(_graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
+	vkQueueWaitIdle(_graphicsQueue);
+
+	vkFreeCommandBuffers(_device, _commandPool2, 1, &commandBuffer);
+}
+
 
 void VulkanEngine::create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage, AllocatedBuffer &buffer, const bool destroy)
 {
@@ -264,6 +295,7 @@ void VulkanEngine::init_vulkan()
 		VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME,
 		VK_KHR_PIPELINE_LIBRARY_EXTENSION_NAME,
 
+
 		// Required by VK_KHR_acceleration_structure
 		VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME,
 		VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME,
@@ -273,7 +305,8 @@ void VulkanEngine::init_vulkan()
 		VK_KHR_SPIRV_1_4_EXTENSION_NAME,
 
 		// Required by VK_KHR_spirv_1_4
-		VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME
+		VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME,
+		VK_EXT_SHADER_ATOMIC_FLOAT_EXTENSION_NAME
 	};
 
 	vkb::PhysicalDeviceSelector selector{ vkb_inst };
@@ -318,6 +351,37 @@ void VulkanEngine::init_vulkan()
 		});
 }
 	
+
+uint32_t VulkanEngine::getMemoryType(uint32_t typeBits, VkMemoryPropertyFlags properties, VkBool32* memTypeFound)
+{
+	for (uint32_t i = 0; i < _memoryProperties.memoryTypeCount; i++)
+	{
+		if ((typeBits & 1) == 1)
+		{
+			if ((_memoryProperties.memoryTypes[i].propertyFlags & properties) == properties)
+			{
+				if (memTypeFound)
+				{
+					*memTypeFound = true;
+				}
+				return i;
+			}
+		}
+		typeBits >>= 1;
+	}
+
+	if (memTypeFound)
+	{
+		*memTypeFound = false;
+		return 0;
+	}
+	else
+	{
+		throw std::runtime_error("Could not find a matching memory type");
+	}
+}
+
+
 void VulkanEngine::init_swapchain()
 {
 	vkb::SwapchainBuilder swapchainBuilder{ _gpu, _device, _surface };
@@ -339,7 +403,7 @@ void VulkanEngine::init_swapchain()
 
 	_mainDeletionQueue.push_function([=]() {
 		vkDestroySwapchainKHR(_device, _swapchain, nullptr);
-		});
+	});
 
 	VkExtent3D depthImageExtent = {
 		_window->getWidth(),
@@ -349,7 +413,7 @@ void VulkanEngine::init_swapchain()
 
 	_depthFormat = VK_FORMAT_D32_SFLOAT;
 	VkImageCreateInfo depth_info = vkinit::image_create_info(
-		_depthFormat, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, depthImageExtent);
+		_depthFormat, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, depthImageExtent);
 	
 	VmaAllocationCreateInfo dimg_allocinfo = {};
 	dimg_allocinfo.usage			= VMA_MEMORY_USAGE_GPU_ONLY;
@@ -444,6 +508,7 @@ void VulkanEngine::init_upload_commands()
 	VkCommandPoolCreateInfo uploadCommandPoolInfo = vkinit::command_pool_create_info(_graphicsQueueFamily);
 
 	VK_CHECK(vkCreateCommandPool(_device, &uploadCommandPoolInfo, nullptr, &_uploadContext._commandPool));
+	VK_CHECK(vkCreateCommandPool(_device, &uploadCommandPoolInfo, nullptr, &_commandPool2));
 
 	VkFenceCreateInfo uploadFenceCreateInfo = vkinit::fence_create_info();
 
@@ -452,6 +517,7 @@ void VulkanEngine::init_upload_commands()
 	VulkanEngine::engine->_mainDeletionQueue.push_function([=]() {
 		vkDestroyFence(_device, _uploadContext._uploadFence, nullptr);
 		vkDestroyCommandPool(_device, _uploadContext._commandPool, nullptr);
+		vkDestroyCommandPool(_device, _commandPool2, nullptr);
 	});
 }
 
@@ -602,9 +668,15 @@ bool VulkanEngine::load_shader_module(const char* filePath, VkShaderModule* outS
 	// open file in binary mode with cursor at the end
 	std::ifstream file(filePath, std::ios::ate | std::ios::binary);
 
+	//std::cout << "hola2!" << std::endl;
+
 	if (!file.is_open()) {
 		return false;
 	}
+
+	//std::cout << "hola3!" << std::endl;
+
+	std::cout << filePath << std::endl;
 
 	// Find up the size by looking up the location of the cursor
 	// Since it is at the end, it gives the number of bytes
@@ -632,8 +704,11 @@ bool VulkanEngine::load_shader_module(const char* filePath, VkShaderModule* outS
 
 	// Check if creation goes well
 	VkShaderModule module;
-	if (vkCreateShaderModule(_device, &createInfo, nullptr, &module) != VK_SUCCESS)
-		return false;
+	//if (vkCreateShaderModule(_device, &createInfo, nullptr, &module) != VK_SUCCESS)
+	//	return false;
+	VkResult r = vkCreateShaderModule(_device, &createInfo, nullptr, &module);
+
+		
 
 	*outShaderModule = module;
 	return true;
@@ -677,7 +752,6 @@ void VulkanEngine::updateFrame()
 		resetFrame();
 		refMatrix = m;
 	}
-	//if(_denoise_frame < 100)
 	_denoise_frame++;
 }
 
@@ -685,6 +759,7 @@ void VulkanEngine::resetFrame()
 {
 	_denoise_frame = -1;
 }
+
 
 void VulkanEngine::updateCameraMatrices()
 {
@@ -708,6 +783,9 @@ void VulkanEngine::updateCameraMatrices()
 		cameraData.projection	= projection;
 		cameraData.prevView		= prevView;
 		cameraData.prevProj		= prevProj;
+		cameraData.pos			= _scene->_camera->_position;
+		cameraData.near			= 0.1f;
+		cameraData.far			= 1000.0f;
 
 		prevView = view;
 		prevProj = projection;
@@ -718,27 +796,27 @@ void VulkanEngine::updateCameraMatrices()
 		vmaUnmapMemory(_allocator, renderer->_cameraBuffer._allocation);
 	}
 
-	void* frameData;
-	vmaMapMemory(_allocator, renderer->_frameCountBuffer._allocation, &frameData);
-	memcpy(frameData, &_denoise_frame, sizeof(int));
-	vmaUnmapMemory(_allocator, renderer->_frameCountBuffer._allocation);
+	//void* frameData;
+	//vmaMapMemory(_allocator, renderer->_frameCountBuffer._allocation, &frameData);
+	//memcpy(frameData, &_denoise_frame, sizeof(int));
+	//vmaUnmapMemory(_allocator, renderer->_frameCountBuffer._allocation);
 
 	// Copy RAY-TRACING camera, it need the inverse
 	// --------------------------------------------
 	// TODO: rethink how frame can be passed each frame and update the matrix only if changed
 
 	// Copy ray tracing camera, it need the inverse
-	RTCameraData rtCamera;
-	rtCamera.invProj = glm::inverse(projection);
-	rtCamera.invView = glm::inverse(view);
-	rtCamera.frame = !_denoise ? glm::vec4(0) : glm::vec4(_denoise_frame);
+	//RTCameraData rtCamera;
+	//rtCamera.invProj = glm::inverse(projection);
+	//rtCamera.invView = glm::inverse(view);
+	//rtCamera.frame = !_denoise ? glm::vec4(0) : glm::vec4(_denoise_frame);
 
-	//std::cout << _denoise_frame << std::endl;
+	////std::cout << _denoise_frame << std::endl;
 
-	void* rtCameraData;
-	vmaMapMemory(_allocator, renderer->_rtCameraBuffer._allocation, &rtCameraData);
-	memcpy(rtCameraData, &rtCamera, sizeof(RTCameraData));
-	vmaUnmapMemory(_allocator, renderer->_rtCameraBuffer._allocation);
+	//void* rtCameraData;
+	//vmaMapMemory(_allocator, renderer->_rtCameraBuffer._allocation, &rtCameraData);
+	//memcpy(rtCameraData, &rtCamera, sizeof(RTCameraData));
+	//vmaUnmapMemory(_allocator, renderer->_rtCameraBuffer._allocation);
 }
 
 VkPipeline PipelineBuilder::build_pipeline(VkDevice device, VkRenderPass pass)

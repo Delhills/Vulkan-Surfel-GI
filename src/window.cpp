@@ -119,7 +119,7 @@ void Window::input_update()
 
 	SDL_ShowCursor(!_mouse_locked);
 
-	ImGui::SetMouseCursor(_mouse_locked ? ImGuiMouseCursor_None : ImGuiMouseCursor_Arrow);
+	//ImGui::SetMouseCursor(_mouse_locked ? ImGuiMouseCursor_None : ImGuiMouseCursor_Arrow);
 
 	if (_mouse_locked)
 		center_mouse();

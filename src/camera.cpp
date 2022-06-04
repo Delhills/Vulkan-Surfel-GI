@@ -57,6 +57,7 @@ glm::mat4 Camera::getProjection(const float ratio)
 	return glm::perspective(glm::radians(_fov), ratio, 0.1f, 1000.0f);
 }
 
+
 void Camera::updateCameraVectors()
 {
 	glm::vec3 front;

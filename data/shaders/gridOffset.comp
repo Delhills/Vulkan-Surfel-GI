@@ -1,0 +1,35 @@
+#version 450
+
+#extension GL_EXT_nonuniform_qualifier : enable
+#extension GL_EXT_scalar_block_layout : enable
+#extension GL_EXT_shader_atomic_float : enable
+
+#include "bitwise.glsl"
+#include "surfelGIutils.glsl"
+
+const int WIDTH = 1712;
+const int HEIGHT = 912;
+
+layout (local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+// layout(push_constant) uniform constants
+// {
+// 	vec3 a;
+// }pushC;
+
+layout (binding = 0) buffer StatsBuffer {uint stats[8];} statsBuffer;
+layout (binding = 1) buffer GridBuffer {
+	SurfelGridCell cells[];
+} gridcells;
+layout (binding = 2) buffer CellBuffer {uint cell[];} surfelcells;
+
+
+void main()
+{	
+
+	SurfelGridCell cell = gridcells.cells[gl_GlobalInvocationID.x];
+	cell.offset = atomicAdd(statsBuffer.stats[1], cell.count);
+	cell.count = 0;
+	gridcells.cells[gl_GlobalInvocationID.x] = cell;
+	
+}

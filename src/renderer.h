@@ -25,10 +25,63 @@ struct pushConstants {
 	glm::mat4 render_matrix;
 };
 
+struct Surfel
+{
+	glm::vec3 position;
+	float padding0;
+	glm::vec3 normal;
+	float padding1;
+	glm::vec3 color;
+	float radius;
+};
+
+struct SurfelData
+{
+	unsigned int uid;
+
+	glm::vec3 mean;
+	glm::vec3 shortMean;
+
+	float vbbr;
+
+	glm::vec3 hitpos;
+	unsigned int hitnormal;
+
+	glm::vec3 hitenergy;
+	float padding0;
+
+	glm::vec3 traceresult;
+	float padding1;
+};
+
+struct SurfelGridCell
+{
+	unsigned int count;
+	unsigned int offset;
+	unsigned int pad0;
+	unsigned int pad1;
+};
+
+static const unsigned int SURFEL_STATS_OFFSET_COUNT = 0;
+static const unsigned int SURFEL_STATS_OFFSET_CELLALLOCATOR = 4;
+static const unsigned int SURFEL_STATS_OFFSET_INDIRECT = 8;
+static const unsigned int SURFEL_INDIRECT_NUMTHREADS = 32;
+static const float SURFEL_TARGET_COVERAGE = 0.5;
+static const glm::uvec3 SURFEL_GRID_DIMENSIONS = glm::uvec3(128, 64, 128); // (64, 32, 64)   (128, 64, 128)
+static const unsigned int SURFEL_TABLE_SIZE = SURFEL_GRID_DIMENSIONS.x * SURFEL_GRID_DIMENSIONS.y * SURFEL_GRID_DIMENSIONS.z;
+
+static const unsigned int SURFEL_CAPACITY = 100000;
+
 struct AccelerationStructure {
 	VkAccelerationStructureKHR	handle;
 	uint64_t					deviceAddress = 0;
 	AllocatedBuffer	buffer;
+};
+
+struct RayTracingScratchBuffer {
+
+	uint64_t					deviceAddress = 0;
+	AllocatedBuffer				buffer;
 };
 
 constexpr unsigned int FRAME_OVERLAP = 2;
@@ -48,6 +101,8 @@ public:
 
 	FrameData		_frames[FRAME_OVERLAP];
 	pushConstants	_constants;
+
+	Texture blueNoise;
 
 
 	// RASTERIZER VARIABLES -----------------------
@@ -124,6 +179,8 @@ public:
 	AllocatedBuffer				missShaderBindingTable;
 	AllocatedBuffer				hitShaderBindingTable;
 
+
+
 	std::vector<VkRayTracingShaderGroupCreateInfoKHR> shaderGroups{};
 
 	PFN_vkCreateAccelerationStructureKHR				vkCreateAccelerationStructureKHR;
@@ -135,6 +192,8 @@ public:
 	PFN_vkCreateRayTracingPipelinesKHR					vkCreateRayTracingPipelinesKHR;
 	PFN_vkCmdTraceRaysKHR								vkCmdTraceRaysKHR;
 	PFN_vkDestroyAccelerationStructureKHR				vkDestroyAccelerationStructureKHR;
+
+
 
 	// POST VARIABLES ------------------------
 	VkPipeline					_postPipeline;
@@ -184,13 +243,81 @@ public:
 	VkSemaphore					_denoiseSemaphore;
 	AllocatedBuffer				_denoiseFrameBuffer;
 
+
+
+
+
+	VkCommandBuffer				_SurfelPositionCmd;
+	VkSemaphore					_SurfelPositionSemaphore;
+	VkDescriptorPool			_SurfelPositionDescPool;
+	VkDescriptorSet				_SurfelPositionDescSet;
+	VkDescriptorSetLayout		_SurfelPositionDescSetLayout;
+	VkPipeline					_SurfelPositionPipeline;
+	VkPipelineLayout			_SurfelPositionPipelineLayout;
+	VkSampler					_SurfelPositionNormalSampler;
+
+
+	VkCommandBuffer				_PrepareIndirectCmdBuffer;
+	VkSemaphore					_PrepareIndirectSemaphore;
+	VkDescriptorPool			_PrepareIndirectDescPool;
+	VkDescriptorSet				_PrepareIndirectDescSet;
+	VkDescriptorSetLayout		_PrepareIndirectDescSetLayout;
+	VkPipeline					_PrepareIndirectPipeline;
+	VkPipelineLayout			_PrepareIndirectPipelineLayout;
+
+
+	VkCommandBuffer				_GridResetCmdBuffer;
+	VkSemaphore					_GridResetSemaphore;
+	VkDescriptorPool			_GridResetDescPool;
+	VkDescriptorSet				_GridResetDescSet;
+	VkDescriptorSetLayout		_GridResetDescSetLayout;
+	VkPipeline					_GridResetPipeline;
+	VkPipelineLayout			_GridResetPipelineLayout;
+
+
+	VkCommandBuffer				_UpdateSurfelsCmdBuffer;
+	VkSemaphore					_UpdateSurfelsSemaphore;
+	VkDescriptorPool			_UpdateSurfelsDescPool;
+	VkDescriptorSet				_UpdateSurfelsDescSet;
+	VkDescriptorSetLayout		_UpdateSurfelsDescSetLayout;
+	VkPipeline					_UpdateSurfelsPipeline;
+	VkPipelineLayout			_UpdateSurfelsPipelineLayout;
+
+	VkCommandBuffer				_GridOffsetCmdBuffer;
+	VkSemaphore					_GridOffsetSemaphore;
+	VkDescriptorPool			_GridOffsetDescPool;
+	VkDescriptorSet				_GridOffsetDescSet;
+	VkDescriptorSetLayout		_GridOffsetDescSetLayout;
+	VkPipeline					_GridOffsetPipeline;
+	VkPipelineLayout			_GridOffsetPipelineLayout;
+
+	VkCommandBuffer				_SurfelBinningCmdBuffer;
+	VkSemaphore					_SurfelBinningSemaphore;
+	VkDescriptorPool			_SurfelBinningDescPool;
+	VkDescriptorSet				_SurfelBinningDescSet;
+	VkDescriptorSetLayout		_SurfelBinningDescSetLayout;
+	VkPipeline					_SurfelBinningPipeline;
+	VkPipelineLayout			_SurfelBinningPipelineLayout;
+
+	////Surfel GI
+	AllocatedBuffer				_SurfelPositionBuffer;
+	AllocatedBuffer				_SurfelBuffer;
+	AllocatedBuffer				_SurfelDataBuffer;
+	AllocatedBuffer				_SurfelStatsBuffer;
+	AllocatedBuffer				_SurfelGridBuffer;
+	AllocatedBuffer				_SurfelCellBuffer;
+	Texture						_result;
+	Texture						_debugGI;
+
+	int shaderIf;
+
 	void rasterize();
 
 	void render();
 
-	void raytrace();
+	//void raytrace();
 
-	void rasterize_hybrid();
+	//void rasterize_hybrid();
 
 	void render_gui();
 
@@ -209,6 +336,7 @@ public:
 	void recreate_renderer();
 
 	void buildTlas(const std::vector<TlasInstance>& input, VkBuildAccelerationStructureFlagsKHR flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR, bool update = false);
+
 private:
 
 	void init_framebuffers();
@@ -221,7 +349,9 @@ private:
 
 	void init_deferred_descriptors();
 
-	void init_forward_pipeline();
+	//void init_gisurfels_descriptors();
+
+	//void init_forward_pipeline();
 
 	void init_deferred_pipelines();
 
@@ -257,11 +387,70 @@ private:
 
 	void init_compute_pipeline();
 
-	void build_raytracing_command_buffers();
+	//void build_raytracing_command_buffers();
 
-	void build_shadow_command_buffer();
+	//void build_shadow_command_buffer();
 
 	void build_compute_command_buffer();
+
+	void create_SurfelGi_resources();
+	
+	void surfel_position();
+
+	void prepare_indirect();
+	
+	void grid_reset();
+
+	void update_surfels();
+
+	void grid_offset();
+
+	void surfel_binning();
+
+
+	//void transitionBufferLayout(VkBuffer buffer, size_t size, VkAccessFlagBits oldLayout, VkAccessFlagBits newLayout, VkCommandBuffer cmd);
+
+
+
+	void create_surfel_position_descriptors();
+
+	void init_surfel_position_pipeline();
+
+	void build_surfel_position_command_buffer();
+
+	void create_prepare_indirect_descriptors();
+
+	void init_prepare_indirect_pipeline();
+
+	void build_prepare_indirect_buffer();
+
+	void create_grid_reset_descriptors();
+
+	void init_grid_reset_pipeline();
+
+	void build_grid_reset_buffer();
+
+	void create_update_surfels_descriptors();
+
+	void init_update_surfels_pipeline();
+
+	void build_update_surfels_buffer();
+
+	void create_grid_offset_descriptors();
+
+	void init_grid_offset_pipeline();
+
+	void build_grid_offset_buffer();
+
+	void create_surfel_binning_descriptors();
+
+	void init_surfel_binning_pipeline();
+
+	void build_surfel_binning_buffer();
+
+	void todo_de_nuevo();
+
+
 
 	// POST
 	void create_post_renderPass();
@@ -277,5 +466,5 @@ private:
 	// HYBRID
 	void create_hybrid_descriptors();
 
-	void build_hybrid_command_buffers();
+	//void build_hybrid_command_buffers();
 };

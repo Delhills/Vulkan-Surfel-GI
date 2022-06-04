@@ -1,0 +1,26 @@
+#version 450
+
+#extension GL_EXT_nonuniform_qualifier : enable
+#extension GL_EXT_scalar_block_layout : enable
+
+#include "bitwise.glsl"
+#include "surfelGIutils.glsl"
+
+const int WIDTH = 1712;
+const int HEIGHT = 912;
+
+layout (local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+// layout(push_constant) uniform constants
+// {
+// 	int x;
+// }pushC;
+
+layout (binding = 0) buffer GridBuffer {
+	SurfelGridCell cells[];
+} gridcells;
+
+void main()
+{	
+	gridcells.cells[gl_GlobalInvocationID.x].count = 0;
+}

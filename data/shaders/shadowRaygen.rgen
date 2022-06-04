@@ -89,11 +89,12 @@ void main()
 			shadowFactor /= shadowSamples;
 		}
 
+		vec3 color = vec3(shadowFactor);
+		imageStore(shadowImage[i], ivec2(gl_LaunchIDEXT.xy), vec4(color, 1));
+		/*
 		if(frame > 0)
 		{
 			float a = 1.0f / float(frame + 1);
-			//if( frame > 64)
-			//	return;
 			
 			vec3 old = imageLoad(shadowImage[i], ivec2(gl_LaunchIDEXT.xy)).rgb;
 			vec3 color = mix(old, vec3(shadowFactor), a);
@@ -106,9 +107,11 @@ void main()
 			vec2 reprojectedUV = gl_LaunchIDEXT.xy - motion;
 
 			// Mix reprojected old color with new color
-			vec3 old = imageLoad(shadowImage[i], ivec2(reprojectedUV)).rgb;
-			vec3 color = mix(old, vec3(shadowFactor), 0.5);
+			float old = imageLoad(shadowImage[i], ivec2(reprojectedUV)).r;
+
+			vec3 color = mix(vec3(old), vec3(shadowFactor), 0.5);
 			imageStore(shadowImage[i], ivec2(gl_LaunchIDEXT.xy), vec4(color, 1));
 		}
+		*/
 	}
 }

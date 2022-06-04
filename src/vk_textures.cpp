@@ -2,7 +2,7 @@
 
 #include "vk_initializers.h"
 #include "vk_engine.h"
-#include "stb_image.h"
+#include "stb_image/stb_image.h"
 #include "vk_utils.h"
 
 extern std::vector<std::string> searchPaths;
