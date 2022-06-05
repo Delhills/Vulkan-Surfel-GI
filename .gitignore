@@ -1,12 +1,8 @@
-data/shaders/*.spv
 data/meshes
 data/textures
-data/compile_shaders.bat
 .vs
 Debug
 external
 x64
 SDL2.dll
-vkPinut.sln
-*.vcxproj*
 imgui.ini

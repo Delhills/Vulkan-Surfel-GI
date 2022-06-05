@@ -1,0 +1,197 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Archivos de origen">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Archivos de encabezado">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="Archivos de recursos">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Shaders">
+      <UniqueIdentifier>{c93e0b35-ba29-42b1-95ea-32d0a6d556b2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ImGui">
+      <UniqueIdentifier>{2a76b244-655c-495a-a0e6-26a0ea2e1e3f}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\main.cpp">
+      <Filter>Archivos de recursos</Filter>
+    </ClCompile>
+    <ClCompile Include="src\vk_engine.cpp">
+      <Filter>Archivos de recursos</Filter>
+    </ClCompile>
+    <ClCompile Include="src\vk_initializers.cpp">
+      <Filter>Archivos de recursos</Filter>
+    </ClCompile>
+    <ClCompile Include="external\vkbootstrap\VkBootstrap.cpp">
+      <Filter>Archivos de recursos</Filter>
+    </ClCompile>
+    <ClCompile Include="src\vk_mesh.cpp">
+      <Filter>Archivos de recursos</Filter>
+    </ClCompile>
+    <ClCompile Include="src\vk_textures.cpp">
+      <Filter>Archivos de recursos</Filter>
+    </ClCompile>
+    <ClCompile Include="external\imgui\imgui.cpp">
+      <Filter>ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="external\imgui\imgui_demo.cpp">
+      <Filter>ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="external\imgui\imgui_draw.cpp">
+      <Filter>ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="external\imgui\imgui_widgets.cpp">
+      <Filter>ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="external\imgui\imgui_impl_sdl.cpp">
+      <Filter>ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="external\imgui\imgui_impl_vulkan.cpp">
+      <Filter>ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="src\entity.cpp">
+      <Filter>Archivos de recursos</Filter>
+    </ClCompile>
+    <ClCompile Include="external\imgui\ImGuizmo.cpp">
+      <Filter>Archivos de recursos</Filter>
+    </ClCompile>
+    <ClCompile Include="src\renderer.cpp">
+      <Filter>Archivos de recursos</Filter>
+    </ClCompile>
+    <ClCompile Include="src\camera.cpp">
+      <Filter>Archivos de recursos</Filter>
+    </ClCompile>
+    <ClCompile Include="src\window.cpp">
+      <Filter>Archivos de recursos</Filter>
+    </ClCompile>
+    <ClCompile Include="src\scene.cpp">
+      <Filter>Archivos de recursos</Filter>
+    </ClCompile>
+    <ClCompile Include="src\material.cpp">
+      <Filter>Archivos de recursos</Filter>
+    </ClCompile>
+    <ClCompile Include="src\vk_utils.cpp">
+      <Filter>Archivos de recursos</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\vk_engine.h">
+      <Filter>Archivos de encabezado</Filter>
+    </ClInclude>
+    <ClInclude Include="src\vk_initializers.h">
+      <Filter>Archivos de encabezado</Filter>
+    </ClInclude>
+    <ClInclude Include="src\vk_types.h">
+      <Filter>Archivos de encabezado</Filter>
+    </ClInclude>
+    <ClInclude Include="external\vkbootstrap\VkBootstrap.h">
+      <Filter>Archivos de encabezado</Filter>
+    </ClInclude>
+    <ClInclude Include="src\vk_mesh.h">
+      <Filter>Archivos de encabezado</Filter>
+    </ClInclude>
+    <ClInclude Include="src\vk_textures.h">
+      <Filter>Archivos de encabezado</Filter>
+    </ClInclude>
+    <ClInclude Include="src\entity.h">
+      <Filter>Archivos de encabezado</Filter>
+    </ClInclude>
+    <ClInclude Include="external\imgui\ImGuizmo.h">
+      <Filter>Archivos de encabezado</Filter>
+    </ClInclude>
+    <ClInclude Include="src\renderer.h">
+      <Filter>Archivos de encabezado</Filter>
+    </ClInclude>
+    <ClInclude Include="src\camera.h">
+      <Filter>Archivos de encabezado</Filter>
+    </ClInclude>
+    <ClInclude Include="src\window.h">
+      <Filter>Archivos de encabezado</Filter>
+    </ClInclude>
+    <ClInclude Include="src\scene.h">
+      <Filter>Archivos de encabezado</Filter>
+    </ClInclude>
+    <ClInclude Include="src\material.h">
+      <Filter>Archivos de encabezado</Filter>
+    </ClInclude>
+    <ClInclude Include="src\vk_utils.h">
+      <Filter>Archivos de encabezado</Filter>
+    </ClInclude>
+    <ClInclude Include="external\vma\vk_mem_alloc.h">
+      <Filter>Archivos de encabezado</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="data\shaders\geometry_shader.frag">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="data\shaders\quad.vert">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="data\shaders\testQuad.frag">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="data\shaders\basic.vert">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="data\shaders\raygen.rgen">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="data\shaders\miss.rmiss">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="data\shaders\closesthit.rchit">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="data\shaders\forward.frag">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="data\shaders\helpers.glsl">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="data\shaders\raycommon.glsl">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="data\shaders\random.glsl">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="data\shaders\postVertex.vert">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="data\shaders\postFragment.frag">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="data\shaders\hybridRaygen.rgen">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="data\shaders\hybridHit.rchit">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="data\shaders\skybox.vert">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="data\shaders\skybox.frag">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="data\shaders\shadowRaygen.rgen">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="data\shaders\shadowHit.rchit">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="data\shaders\blur.comp">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="data\shaders\taa.comp">
+      <Filter>Shaders</Filter>
+    </None>
+  </ItemGroup>
+</Project>
