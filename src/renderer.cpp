@@ -53,7 +53,7 @@ Renderer::Renderer(Scene* scene)
 	
 	// VKRay
 	create_bottom_acceleration_structure();
-	//create_top_acceleration_structure();
+	create_top_acceleration_structure();
 	//create_rt_descriptors();
 	//create_hybrid_descriptors();
 	//init_raytracing_pipeline();
@@ -71,6 +71,7 @@ Renderer::Renderer(Scene* scene)
 	update_surfels();
 	grid_offset();
 	surfel_binning();
+	surfel_ray_tracing();
 	//todo_de_nuevo();
 }
 
@@ -1693,7 +1694,7 @@ void Renderer::create_top_acceleration_structure()
 		}
 	}
 
-	buildTlas(_tlas, VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR | VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT_KHR);
+	buildTlas(_tlas, VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR);
 }
 
 // ---------------------------------------------------------------------------------------
@@ -1823,52 +1824,93 @@ void Renderer::buildTlas(const std::vector<TlasInstance>& instances, VkBuildAcce
 	vmaUnmapMemory(VulkanEngine::engine->_allocator, _instanceBuffer._allocation);
 
 	VkDeviceOrHostAddressConstKHR instanceDataDeviceAddress{};
-	instanceDataDeviceAddress.deviceAddress = VulkanEngine::engine->getBufferDeviceAddress(_instanceBuffer._buffer);
+	//instanceDataDeviceAddress.deviceAddress = VulkanEngine::engine->getBufferDeviceAddress(_instanceBuffer._buffer);
 
-	// Create a stucture that holds a device pointer to the uploaded instances.
-	VkAccelerationStructureGeometryInstancesDataKHR instancesData{};
-	instancesData.sType					= VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR;
-	instancesData.arrayOfPointers		= VK_FALSE;
-	instancesData.data					= instanceDataDeviceAddress;
 
-	// Put the above structure to the structure geometry
-	VkAccelerationStructureGeometryKHR asGeometry = vkinit::acceleration_structure_geometry_khr();
-	asGeometry.geometryType				= VK_GEOMETRY_TYPE_INSTANCES_KHR;
-	asGeometry.flags					= VK_GEOMETRY_OPAQUE_BIT_KHR;
-	asGeometry.geometry.instances		= instancesData;
+
+	VkBufferDeviceAddressInfoKHR bufferDeviceAddressInfoInstances{};
+	bufferDeviceAddressInfoInstances.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
+	bufferDeviceAddressInfoInstances.buffer = _instanceBuffer._buffer;
+	instanceDataDeviceAddress.deviceAddress = VulkanEngine::engine->vkGetBufferDeviceAddressKHR(*device, &bufferDeviceAddressInfoInstances);
+
+	//// Create a stucture that holds a device pointer to the uploaded instances.
+	//VkAccelerationStructureGeometryInstancesDataKHR instancesData{};
+	//instancesData.sType					= VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR;
+	//instancesData.arrayOfPointers		= VK_FALSE;
+	//instancesData.data					= instanceDataDeviceAddress;
+
+	//// Put the above structure to the structure geometry
+	//VkAccelerationStructureGeometryKHR asGeometry = vkinit::acceleration_structure_geometry_khr();
+	//asGeometry.geometryType				= VK_GEOMETRY_TYPE_INSTANCES_KHR;
+	//asGeometry.flags					= VK_GEOMETRY_OPAQUE_BIT_KHR;
+	//asGeometry.geometry.instances		= instancesData;
+
+
+	VkAccelerationStructureGeometryKHR accelerationStructureGeometry{};
+	accelerationStructureGeometry.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
+	accelerationStructureGeometry.geometryType = VK_GEOMETRY_TYPE_INSTANCES_KHR;
+	accelerationStructureGeometry.flags = VK_GEOMETRY_OPAQUE_BIT_KHR;
+	accelerationStructureGeometry.geometry.instances.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR;
+	accelerationStructureGeometry.geometry.instances.arrayOfPointers = VK_FALSE;
+	accelerationStructureGeometry.geometry.instances.data = instanceDataDeviceAddress;
+
+
+
 
 	// Find sizes
-	VkAccelerationStructureBuildGeometryInfoKHR asBuildGeometryInfo = vkinit::acceleration_structure_build_geometry_info();
-	asBuildGeometryInfo.type			= VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
-	asBuildGeometryInfo.mode			= update ? VK_BUILD_ACCELERATION_STRUCTURE_MODE_UPDATE_KHR : VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
-	asBuildGeometryInfo.flags			= flags;
-	asBuildGeometryInfo.geometryCount	= 1;
-	asBuildGeometryInfo.pGeometries		= &asGeometry;
-	asBuildGeometryInfo.srcAccelerationStructure = update ? _topLevelAS.handle : VK_NULL_HANDLE;
+	//VkAccelerationStructureBuildGeometryInfoKHR asBuildGeometryInfo = vkinit::acceleration_structure_build_geometry_info();
+	//asBuildGeometryInfo.type			= VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
+	//asBuildGeometryInfo.mode			= update ? VK_BUILD_ACCELERATION_STRUCTURE_MODE_UPDATE_KHR : VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
+	//asBuildGeometryInfo.flags			= flags;
+	//asBuildGeometryInfo.geometryCount	= 1;
+	//asBuildGeometryInfo.pGeometries		= &accelerationStructureGeometry;
+	//asBuildGeometryInfo.srcAccelerationStructure = update ? _topLevelAS.handle : VK_NULL_HANDLE;
+	//asBuildGeometryInfo.dstAccelerationStructure = _topLevelAS.handle;
+
+
+	VkAccelerationStructureBuildGeometryInfoKHR accelerationStructureBuildGeometryInfo{};
+	accelerationStructureBuildGeometryInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
+	accelerationStructureBuildGeometryInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
+	accelerationStructureBuildGeometryInfo.flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
+	accelerationStructureBuildGeometryInfo.geometryCount = 1;
+	accelerationStructureBuildGeometryInfo.pGeometries = &accelerationStructureGeometry;
+
 
 	uint32_t									primitiveCount = static_cast<uint32_t>(instances.size());
-	VkAccelerationStructureBuildSizesInfoKHR	asBuildSizesInfo = vkinit::acceleration_structure_build_sizes_info();
+	VkAccelerationStructureBuildSizesInfoKHR accelerationStructureBuildSizesInfo{};
+	accelerationStructureBuildSizesInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR;
 	vkGetAccelerationStructureBuildSizesKHR(
 		VulkanEngine::engine->_device,
 		VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR,
-		&asBuildGeometryInfo,
+		&accelerationStructureBuildGeometryInfo,
 		&primitiveCount,
-		&asBuildSizesInfo
+		&accelerationStructureBuildSizesInfo
 	);
 
-	if (!update)
-	{
-		create_acceleration_structure(_topLevelAS, VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR, asBuildSizesInfo);
-	}
+
+	create_acceleration_structure(_topLevelAS, VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR, accelerationStructureBuildSizesInfo);
 
 	
 	RayTracingScratchBuffer scratchBuffer{};
-	VulkanEngine::engine->create_buffer(asBuildSizesInfo.buildScratchSize, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, VMA_MEMORY_USAGE_GPU_ONLY, scratchBuffer.buffer, false);
+	VulkanEngine::engine->create_buffer(accelerationStructureBuildSizesInfo.buildScratchSize, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, VMA_MEMORY_USAGE_GPU_ONLY, scratchBuffer.buffer, false);
 
 	VkBufferDeviceAddressInfoKHR bufferDeviceAddressInfo{};
 	bufferDeviceAddressInfo.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
 	bufferDeviceAddressInfo.buffer = scratchBuffer.buffer._buffer;
 	scratchBuffer.deviceAddress = VulkanEngine::engine->vkGetBufferDeviceAddressKHR(*device, &bufferDeviceAddressInfo);
+
+
+	VkAccelerationStructureBuildGeometryInfoKHR accelerationBuildGeometryInfo{};
+	accelerationBuildGeometryInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
+	accelerationBuildGeometryInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
+	accelerationBuildGeometryInfo.flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
+	accelerationBuildGeometryInfo.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
+	accelerationBuildGeometryInfo.dstAccelerationStructure = _topLevelAS.handle;
+	accelerationBuildGeometryInfo.geometryCount = 1;
+	accelerationBuildGeometryInfo.pGeometries = &accelerationStructureGeometry;
+	accelerationBuildGeometryInfo.scratchData.deviceAddress = scratchBuffer.deviceAddress;
+
+
 
 	VkAccelerationStructureBuildRangeInfoKHR asBuildRangeInfo{};
 	asBuildRangeInfo.primitiveCount		= static_cast<uint32_t>(instances.size());
@@ -1876,7 +1918,10 @@ void Renderer::buildTlas(const std::vector<TlasInstance>& instances, VkBuildAcce
 	asBuildRangeInfo.firstVertex		= 0;
 	asBuildRangeInfo.transformOffset	= 0;
 
-	const VkAccelerationStructureBuildRangeInfoKHR* pAsBuildRangeInfo = &asBuildRangeInfo;
+	std::vector<VkAccelerationStructureBuildRangeInfoKHR*> accelerationBuildStructureRangeInfos = { &asBuildRangeInfo };
+
+
+	//const VkAccelerationStructureBuildRangeInfoKHR* pAsBuildRangeInfo = &asBuildRangeInfo;
 	
 	VkCommandPoolCreateInfo poolInfo = vkinit::command_pool_create_info(VulkanEngine::engine->_graphicsQueueFamily);
 
@@ -1891,7 +1936,7 @@ void Renderer::buildTlas(const std::vector<TlasInstance>& instances, VkBuildAcce
 
 	vkBeginCommandBuffer(cmd, &beginInfo);
 
-	vkCmdBuildAccelerationStructuresKHR(cmd, 1, &asBuildGeometryInfo, &pAsBuildRangeInfo);
+	vkCmdBuildAccelerationStructuresKHR(cmd, 1, &accelerationBuildGeometryInfo, accelerationBuildStructureRangeInfos.data());
 
 	vkEndCommandBuffer(cmd);
 
@@ -1908,7 +1953,7 @@ void Renderer::buildTlas(const std::vector<TlasInstance>& instances, VkBuildAcce
 void Renderer::create_acceleration_structure(AccelerationStructure& accelerationStructure, VkAccelerationStructureTypeKHR type, VkAccelerationStructureBuildSizesInfoKHR buildSizeInfo)
 {
 
-	VulkanEngine::engine->create_buffer(buildSizeInfo.accelerationStructureSize, VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, 
+	VulkanEngine::engine->create_buffer(buildSizeInfo.accelerationStructureSize, VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
 		VMA_MEMORY_USAGE_GPU_ONLY, accelerationStructure.buffer, false);
 
 	VkAccelerationStructureCreateInfoKHR asCreateInfo{};
@@ -2910,6 +2955,11 @@ void Renderer::surfel_binning()
 	init_surfel_binning_pipeline();
 
 	build_surfel_binning_buffer();
+}
+
+void Renderer::surfel_ray_tracing()
+{
+	create_surfel_rtx_descriptors();
 }
 
 
@@ -4024,6 +4074,221 @@ void Renderer::build_surfel_binning_buffer()
 
 
 	VK_CHECK(vkEndCommandBuffer(cmd));
+}
+
+
+void Renderer::create_surfel_rtx_descriptors()
+{
+	std::vector<VkDescriptorPoolSize> poolSizes = {
+		{VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, 1},
+		{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 10},
+		{VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 10},
+		{VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 10}
+	};
+
+	const uint32_t nInstances = static_cast<uint32_t>(_scene->_entities.size());
+	const uint32_t nDrawables = static_cast<uint32_t>(_scene->get_drawable_nodes_size());
+	const uint32_t nMaterials = static_cast<uint32_t>(Material::_materials.size());
+	const uint32_t nTextures = static_cast<uint32_t>(Texture::_textures.size());
+	const uint32_t nLights = static_cast<uint32_t>(_scene->_lights.size());
+
+	// binding = 0 TLAS
+	// binding = 1 Storage image
+	// binding = 2 Camera buffer
+	// binding = 3 Gbuffers
+	// binding = 4 Lights buffer
+	// binding = 5 Vertices buffer
+	// binding = 6 Indices buffer
+	// binding = 7 Textures buffer
+	// binding = 8 Skybox buffer
+	// binding = 9 Materials buffer
+	// binding = 10 Scene indices
+	// binding = 11 Matrices buffer
+	// binding = 12 Shadow image
+
+	VkDescriptorSetLayoutBinding TLASBinding = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, 0);			// TLAS
+	VkDescriptorSetLayoutBinding storageImageBinding = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, VK_SHADER_STAGE_RAYGEN_BIT_KHR, 1);			// storage image
+	VkDescriptorSetLayoutBinding cameraBufferBinding = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_RAYGEN_BIT_KHR, 2);			// Camera buffer
+	VkDescriptorSetLayoutBinding gBuffersBinding = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_RAYGEN_BIT_KHR, 3, 6);
+	VkDescriptorSetLayoutBinding lightsBufferBinding = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, 4);	// Lights
+	VkDescriptorSetLayoutBinding vertexBufferBinding = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, 5, nInstances);	// Vertices
+	VkDescriptorSetLayoutBinding indexBufferBinding = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, 6, nInstances);	// Indices
+	VkDescriptorSetLayoutBinding texturesBufferBinding = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR | VK_SHADER_STAGE_MISS_BIT_KHR, 7, nTextures); // Textures buffer
+	VkDescriptorSetLayoutBinding matIdxBufferBinding = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, 8); // Scene indices
+	VkDescriptorSetLayoutBinding materialBufferBinding = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, 9);	// Materials buffer
+	VkDescriptorSetLayoutBinding skyboxBufferBinding = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR | VK_SHADER_STAGE_MISS_BIT_KHR, 10, 2);
+	VkDescriptorSetLayoutBinding matrixBufferBinding = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, 11);	// Matrices
+	VkDescriptorSetLayoutBinding shadowImageBinding = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, VK_SHADER_STAGE_RAYGEN_BIT_KHR, 12, nLights);	// Shadow image
+
+	std::vector<VkDescriptorSetLayoutBinding> setLayoutBindings =
+	{
+		TLASBinding,
+		storageImageBinding,
+		cameraBufferBinding,
+		gBuffersBinding,
+		lightsBufferBinding,
+		vertexBufferBinding,
+		indexBufferBinding,
+		texturesBufferBinding,
+		matrixBufferBinding,
+		materialBufferBinding,
+		matIdxBufferBinding,
+		skyboxBufferBinding,
+		shadowImageBinding
+	};
+
+	VkDescriptorSetLayoutCreateInfo setInfo = vkinit::descriptor_set_layout_create_info(static_cast<uint32_t>(setLayoutBindings.size()), setLayoutBindings);
+	VK_CHECK(vkCreateDescriptorSetLayout(*device, &setInfo, nullptr, &_hybridDescSetLayout));
+
+	VkDescriptorSetAllocateInfo allocInfo = vkinit::descriptor_set_allocate_info(_descriptorPool, &_hybridDescSetLayout);
+	vkAllocateDescriptorSets(*device, &allocInfo, &_hybridDescSet);
+
+	// Binding = 0 TLAS write
+	VkWriteDescriptorSetAccelerationStructureKHR descriptorAccelerationStructureInfo{};
+	descriptorAccelerationStructureInfo.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR;
+	descriptorAccelerationStructureInfo.accelerationStructureCount = 1;
+	descriptorAccelerationStructureInfo.pAccelerationStructures = &_topLevelAS.handle;
+
+	// Binding = 1 Camera write
+	VkDescriptorBufferInfo cameraBufferInfo = vkinit::descriptor_buffer_info(_rtCameraBuffer._buffer, sizeof(RTCameraData));
+
+	// Binding = 2 Output image write
+	VkDescriptorImageInfo storageImageDescriptor = vkinit::descriptor_image_info(_rtImage.imageView, VK_IMAGE_LAYOUT_GENERAL);
+
+	// Binding = 3
+	// Input deferred images write
+	VkDescriptorImageInfo texDescriptorPosition = vkinit::descriptor_image_info(
+		_deferredTextures[0].imageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, _offscreenSampler);	// Position
+	VkDescriptorImageInfo texDescriptorNormal = vkinit::descriptor_image_info(
+		_deferredTextures[1].imageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, _offscreenSampler);	// Normal
+	VkDescriptorImageInfo texDescriptorAlbedo = vkinit::descriptor_image_info(
+		_deferredTextures[2].imageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, _offscreenSampler);	// Albedo
+	VkDescriptorImageInfo texDescriptorMotion = vkinit::descriptor_image_info(
+		_deferredTextures[3].imageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, _offscreenSampler);	// Motion
+	VkDescriptorImageInfo texDescriptorMaterial = vkinit::descriptor_image_info(
+		_deferredTextures[4].imageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, _offscreenSampler);	// Material
+	VkDescriptorImageInfo texDescriptorEmissive = vkinit::descriptor_image_info(
+		_deferredTextures[5].imageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, _offscreenSampler);	// Emissive
+
+	std::vector<VkDescriptorImageInfo> gbuffersDescInfo = { texDescriptorPosition, texDescriptorNormal, texDescriptorAlbedo, texDescriptorMotion, texDescriptorMaterial, texDescriptorEmissive };
+
+	// Binding = 4 Lights buffer descriptor
+	VkDescriptorBufferInfo lightDescBuffer = vkinit::descriptor_buffer_info(_lightBuffer._buffer, sizeof(uboLight) * nLights);
+
+	std::vector<VkDescriptorBufferInfo> vertexDescInfo;
+	std::vector<VkDescriptorBufferInfo> indexDescInfo;
+	std::vector<glm::vec4> idVector;
+	for (Object* obj : _scene->_entities)
+	{
+		AllocatedBuffer vBuffer;
+		size_t bufferSize = sizeof(rtVertexAttribute) * obj->prefab->_mesh->_vertices.size();
+		VulkanEngine::engine->create_buffer(bufferSize, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU, vBuffer);
+
+		std::vector<rtVertexAttribute> vAttr;
+		std::vector<Vertex> vertices = obj->prefab->_mesh->_vertices;
+		vAttr.reserve(vertices.size());
+		for (Vertex& v : vertices) {
+			vAttr.push_back({ {v.normal.x, v.normal.y, v.normal.z, 1}, {v.color.x, v.color.y, v.color.z, 1}, {v.uv.x, v.uv.y, 1, 1} });
+		}
+
+		void* vdata;
+		vmaMapMemory(VulkanEngine::engine->_allocator, vBuffer._allocation, &vdata);
+		memcpy(vdata, vAttr.data(), bufferSize);
+		vmaUnmapMemory(VulkanEngine::engine->_allocator, vBuffer._allocation);
+
+		// Binding = 5 Vertices Info
+		VkDescriptorBufferInfo vertexBufferDescriptor = vkinit::descriptor_buffer_info(vBuffer._buffer, bufferSize);
+		vertexDescInfo.push_back(vertexBufferDescriptor);
+
+		// Binding = 6 Indices Info
+		VkDescriptorBufferInfo indexBufferDescriptor = vkinit::descriptor_buffer_info(obj->prefab->_mesh->_indexBuffer._buffer, sizeof(uint32_t) * obj->prefab->_mesh->_indices.size());
+		indexDescInfo.push_back(indexBufferDescriptor);
+
+		for (Node* root : obj->prefab->_root)
+		{
+			root->fill_index_buffer(idVector);
+		}
+	}
+
+	// Binding = 7 Textures info
+	VkDescriptorSetAllocateInfo textureAllocInfo = {};
+	textureAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+	textureAllocInfo.pNext = nullptr;
+	textureAllocInfo.descriptorSetCount = 1;
+	textureAllocInfo.pSetLayouts = &_textureDescriptorSetLayout;
+	textureAllocInfo.descriptorPool = _descriptorPool;
+
+	VK_CHECK(vkAllocateDescriptorSets(*device, &textureAllocInfo, &_textureDescriptorSet));
+
+	VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_NEAREST);
+	VkSampler sampler;
+	vkCreateSampler(*device, &samplerInfo, nullptr, &sampler);
+
+	std::vector<VkDescriptorImageInfo> imageInfos;
+	for (auto const& texture : Texture::_textures)
+	{
+		VkDescriptorImageInfo imageBufferInfo = vkinit::descriptor_image_info(texture.second->imageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, sampler);
+		imageInfos.push_back(imageBufferInfo);
+	}
+
+	// Binding = 8 Skybox
+	VkDescriptorImageInfo skyboxImagesDesc[2];
+	skyboxImagesDesc[0] = { sampler, Texture::GET("LA_Downtown_Helipad_GoldenHour_8k.jpg")->imageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
+	skyboxImagesDesc[1] = { sampler, Texture::GET("LA_Downtown_Helipad_GoldenHour_Env.hdr")->imageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
+
+	// Binding = 9 Material info
+	VkDescriptorBufferInfo materialBufferInfo = vkinit::descriptor_buffer_info(_matBuffer._buffer, sizeof(GPUMaterial) * nMaterials);
+
+	// Binding = 10 ID info
+	VkDescriptorBufferInfo idDescInfo = vkinit::descriptor_buffer_info(_idBuffer._buffer, sizeof(glm::vec4) * idVector.size());
+
+	// Binding = 11 Matrices info
+	VkDescriptorBufferInfo matrixDescInfo = vkinit::descriptor_buffer_info(_matricesBuffer._buffer, sizeof(glm::mat4) * _scene->_matricesVector.size());
+
+	// Binding = 12 Shadow image
+	std::vector<VkDescriptorImageInfo> shadowImagesDesc(_denoisedImages.size());
+	for (decltype(_denoisedImages.size()) i = 0; i < _denoisedImages.size(); i++)
+	{
+		shadowImagesDesc[i] = { VK_NULL_HANDLE, _denoisedImages[i].imageView, VK_IMAGE_LAYOUT_GENERAL };
+	}
+
+	// Writes list
+	VkWriteDescriptorSet accelerationStructureWrite = vkinit::write_descriptor_acceleration_structure(_hybridDescSet, &descriptorAccelerationStructureInfo, 0);
+	VkWriteDescriptorSet storageImageWrite = vkinit::write_descriptor_image(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, _hybridDescSet, &storageImageDescriptor, 1);
+	VkWriteDescriptorSet cameraWrite = vkinit::write_descriptor_buffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, _hybridDescSet, &cameraBufferInfo, 2);
+	VkWriteDescriptorSet gbuffersWrite = vkinit::write_descriptor_image(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, _hybridDescSet, gbuffersDescInfo.data(), 3, gbuffersDescInfo.size());
+	VkWriteDescriptorSet lightWrite = vkinit::write_descriptor_buffer(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, _hybridDescSet, &lightDescBuffer, 4);
+	VkWriteDescriptorSet vertexBufferWrite = vkinit::write_descriptor_buffer(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, _hybridDescSet, vertexDescInfo.data(), 5, nInstances);
+	VkWriteDescriptorSet indexBufferWrite = vkinit::write_descriptor_buffer(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, _hybridDescSet, indexDescInfo.data(), 6, nInstances);
+	VkWriteDescriptorSet texturesBufferWrite = vkinit::write_descriptor_image(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, _hybridDescSet, imageInfos.data(), 7, nTextures);
+	VkWriteDescriptorSet matIdxBufferWrite = vkinit::write_descriptor_buffer(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, _hybridDescSet, &idDescInfo, 8);
+	VkWriteDescriptorSet materialBufferWrite = vkinit::write_descriptor_buffer(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, _hybridDescSet, &materialBufferInfo, 9);
+	VkWriteDescriptorSet skyboxBufferWrite = vkinit::write_descriptor_image(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, _hybridDescSet, skyboxImagesDesc, 10, 2);
+	VkWriteDescriptorSet matrixBufferWrite = vkinit::write_descriptor_buffer(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, _hybridDescSet, &matrixDescInfo, 11);
+	VkWriteDescriptorSet shadowImageWrite = vkinit::write_descriptor_image(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, _hybridDescSet, shadowImagesDesc.data(), 12, nLights);
+
+	std::vector<VkWriteDescriptorSet> writes = {
+		accelerationStructureWrite,	// 0 TLAS
+		storageImageWrite,
+		cameraWrite,
+		gbuffersWrite,
+		lightWrite,
+		vertexBufferWrite,
+		indexBufferWrite,
+		texturesBufferWrite,
+		matrixBufferWrite,
+		materialBufferWrite,
+		matIdxBufferWrite,
+		skyboxBufferWrite,
+		shadowImageWrite,
+	};
+
+	vkUpdateDescriptorSets(*device, static_cast<uint32_t>(writes.size()), writes.data(), 0, nullptr);
+
+	VulkanEngine::engine->_mainDeletionQueue.push_function([=]() {
+		vkDestroyDescriptorSetLayout(*device, _hybridDescSetLayout, nullptr);
+		vkDestroySampler(*device, sampler, nullptr);
+		});
 }
 
 // POST

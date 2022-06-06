@@ -407,6 +407,8 @@ private:
 
 	void surfel_binning();
 
+	void surfel_ray_tracing();
+
 
 	//void transitionBufferLayout(VkBuffer buffer, size_t size, VkAccessFlagBits oldLayout, VkAccessFlagBits newLayout, VkCommandBuffer cmd);
 
@@ -449,6 +451,9 @@ private:
 	void build_surfel_binning_buffer();
 
 	void todo_de_nuevo();
+
+
+	void create_surfel_rtx_descriptors();
 
 
 
