@@ -71,7 +71,7 @@ Renderer::Renderer(Scene* scene)
 	update_surfels();
 	grid_offset();
 	surfel_binning();
-	surfel_ray_tracing();
+	//surfel_ray_tracing();
 	//todo_de_nuevo();
 }
 
