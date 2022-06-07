@@ -7,6 +7,8 @@ const float SURFEL_TARGET_COVERAGE = 0.5;
 
 vec3 fakepos = vec3(0.0, 5.0, 5.0);
 
+#define PI 3.14159265358979323846
+
 const uint SURFEL_CELL_LIMIT = 1000;
 
 struct Surfel
@@ -156,3 +158,33 @@ const vec3 surfel_neighbor_offsets[27] = {
 	vec3(1, 1, 0),
 	vec3(1, 1, 1),
 };
+
+mat3 GetTangentSpace(in vec3 normal)
+{
+	// Choose a helper vector for the cross product
+	vec3 helper = abs(normal.x) > 0.99 ? vec3(0, 0, 1) : vec3(1, 0, 0);
+
+	// Generate vectors
+	vec3 tangent = normalize(cross(normal, helper));
+	vec3 binormal = normalize(cross(normal, tangent));
+	return mat3(tangent, binormal, normal);
+}
+
+float rand(inout float seed, in vec2 uv)
+{
+	float result = fract(sin(seed * dot(uv, vec2(12.9898, 78.233))) * 43758.5453);
+	seed += 1;
+	return result;
+}
+
+vec3 hemispherepoint_cos(float u, float v) {
+	float phi = v * 2 * PI;
+	float cosTheta = sqrt(1 - u);
+	float sinTheta = sqrt(1 - cosTheta * cosTheta);
+	return vec3(cos(phi) * sinTheta, sin(phi) * sinTheta, cosTheta);
+}
+
+vec3 SampleHemisphere_cos(in vec3 normal, inout float seed, in vec2 pixel)
+{
+	return (hemispherepoint_cos(rand(seed, pixel), rand(seed, pixel)) * GetTangentSpace(normal));
+}

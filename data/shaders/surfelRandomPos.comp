@@ -173,11 +173,14 @@ void main()
 				color += vec4(surfel.color, 1) * contribution;
 			}
 			if (dist2 <= (0.05 * 0.05)){
-				debug = vec4(1.0, 0.0, 0.0, 0.0);
+				
+				debug = vec4(surfel.color, 1.0);
+				//debug = vec4(1.0, 0.0, 0.0, 0.0);
 				//imageStore(image, ivec2(gl_GlobalInvocationID.xy), vec4(1.0, 0.0, 0.0, 0.0));
 			}
 		}
 		else{
+			//debug = vec4(surfel.color, 1.0);
 			//imageStore(image, ivec2(gl_GlobalInvocationID.xy), vec4(0.0, 0.0, 0.0, 0.0));
 		}
 	}

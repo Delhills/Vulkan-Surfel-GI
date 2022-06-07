@@ -134,8 +134,10 @@ void main()
 		color = albedo;
 	}
 	if(debugGI.x != 0){
-		outFragColor = vec4(debugGI, 1.0f );
-		return;
+		//outFragColor = vec4(debugGI, 1.0 );
+		//return;
+
+		color = debugGI;
 	}
 	outFragColor = vec4( color, 1.0f );
 

@@ -57,7 +57,7 @@ void main()
 	vec3 pos = surfel.position;
 	vec3 n = surfel.normal;
 
-	surfel.color = surfel_data.mean;
+	//surfel.color = surfel_data.mean;
 	surfel.radius = SURFEL_MAX_RADIUS;
 
 	vec3 campos = cameraData.pos;

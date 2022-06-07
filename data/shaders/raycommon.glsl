@@ -1,6 +1,9 @@
 struct hitPayload{
     vec4 colorAndDist;
-    vec4 direction;
-    vec4 origin;
+    vec3 result;
+    float pad0;
+    vec3 energy;
+    float pad1;
+    // vec4 origin;
     uint seed;
 };

@@ -22,3 +22,12 @@
 
 %VK_SDK_PATH%/Bin/glslc.exe shaders/deferred.frag -o shaders/output/deferred.frag.spv
 %VK_SDK_PATH%/Bin/glslc.exe shaders/deferred.frag -o ../x64/Release/data/shaders/output/deferred.frag.spv
+
+%VK_SDK_PATH%/Bin/glslc.exe --target-spv=spv1.5 shaders/surfelRayGen.rgen -o shaders/output/surfelRayGen.rgen.spv
+%VK_SDK_PATH%/Bin/glslc.exe --target-spv=spv1.5 shaders/surfelRayGen.rgen -o ../x64/Release/data/shaders/output/surfelRayGen.rgen.spv
+
+%VK_SDK_PATH%/Bin/glslc.exe --target-spv=spv1.5 shaders/surfelMiss.rmiss -o shaders/output/surfelMiss.rmiss.spv
+%VK_SDK_PATH%/Bin/glslc.exe --target-spv=spv1.5 shaders/surfelMiss.rmiss -o ../x64/Release/data/shaders/output/surfelMiss.rmiss.spv
+
+%VK_SDK_PATH%/Bin/glslc.exe --target-spv=spv1.5 shaders/surfelHit.rchit -o shaders/output/surfelHit.rchit.spv
+%VK_SDK_PATH%/Bin/glslc.exe --target-spv=spv1.5 shaders/surfelHit.rchit -o ../x64/Release/data/shaders/output/surfelHit.rchit.spv

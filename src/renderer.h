@@ -37,12 +37,18 @@ struct Surfel
 
 struct SurfelData
 {
-	unsigned int uid;
+	glm::uvec2 primitiveID;
+	glm::uint bary;
+	glm::uint uid;
 
 	glm::vec3 mean;
-	glm::vec3 shortMean;
+	unsigned int life;
 
+	glm::vec3 shortMean;
 	float vbbr;
+
+	glm::vec3 variance;
+	float inconsistency;
 
 	glm::vec3 hitpos;
 	unsigned int hitnormal;
@@ -299,6 +305,29 @@ public:
 	VkPipeline					_SurfelBinningPipeline;
 	VkPipelineLayout			_SurfelBinningPipelineLayout;
 
+
+	std::vector<VkRayTracingShaderGroupCreateInfoKHR> surfelShaderGroups{};
+	
+	VkDescriptorPool			_SurfelRTXDescPool;
+	VkPipeline					_SurfelRTXPipeline;
+	VkPipelineLayout			_SurfelRTXPipelineLayout;
+	VkDescriptorSet				_SurfelRTXDescSet;
+	VkDescriptorSetLayout		_SurfelRTXDescSetLayout;
+	VkCommandBuffer				_SurfelRTXCommandBuffer;
+
+	AllocatedBuffer				_SurfelRTXraygenSBT;
+	AllocatedBuffer				_SurfelRTXmissSBT;
+	AllocatedBuffer				_SurfelRTXhitSBT;
+
+	VkCommandBuffer				_SurfelShadeCmdBuffer;
+	VkSemaphore					_SurfelShadeSemaphore;
+	VkDescriptorPool			_SurfelShadeDescPool;
+	VkDescriptorSet				_SurfelShadeDescSet;
+	VkDescriptorSetLayout		_SurfelShadeDescSetLayout;
+	VkPipeline					_SurfelShadePipeline;
+	VkPipelineLayout			_SurfelShadePipelineLayout;
+
+
 	////Surfel GI
 	AllocatedBuffer				_SurfelPositionBuffer;
 	AllocatedBuffer				_SurfelBuffer;
@@ -455,7 +484,18 @@ private:
 
 	void create_surfel_rtx_descriptors();
 
+	void create_surfel_rtx_pipeline();
 
+	void create_surfel_rtx_SBT();
+
+	void create_surfel_rtx_cmd_buffer();
+
+
+	void create_surfel_shade_descriptors();
+
+	void init_surfel_shade_pipeline();
+
+	void build_surfel_shade_buffer();
 
 	// POST
 	void create_post_renderPass();
