@@ -167,31 +167,30 @@ void Scene::cornell_scene()
 	// -------------
 	Light* light = new Light();
 	light->m_matrix = glm::translate(glm::mat4(1), glm::vec3(0, 8.5, -5));
-	light->color = glm::vec3{ 1.0f, 0.8f, 0.5f };
+	//light->m_matrix = glm::translate(glm::mat4(1), glm::vec3(0, 0.5, 0));
+	//light->color = glm::vec3{ 0.0f, 0.0f, 1.0f };
+	light->color = glm::vec3{ 0.78f, 0.78f, 0.78f };
 	light->intensity = 250.0f;
-	light->radius = 0.1f;
+	light->radius = 10.1f;
 
 	_lights.push_back(light);
 
 	// Create own Materials
 	// --------------------
 	Material* m_white = new Material();
-	m_white->diffuseColor = glm::vec4(1, 1, 1, 1);
+	m_white->diffuseColor = glm::vec4(0.725, 0.71, 0.68, 1);
 	//m_floor->metallicFactor = 0.1f;
 	Material* m_red = new Material();
-	m_red->diffuseColor = glm::vec4(1, 0, 0, 1);
+	m_red->diffuseColor = glm::vec4(0.73, 0.065, 0.05, 1);
 	Material* m_green = new Material();
-	m_green->diffuseColor = glm::vec4(0, 1, 0, 1);
+	m_green->diffuseColor = glm::vec4(0.14, 0.65, 0.091, 1);
 
 	Material* m_mirror = new Material();
-	m_mirror->shadingModel = 3;
-	m_mirror->metallicFactor = 1.f;
+	m_mirror->diffuseColor = glm::vec4{ 0.725, 0.71, 0.68, 1 };
 
 	Material* m_glass = new Material();
-	m_glass->diffuseColor = glm::vec4{ 0.7f, 0.7f, 1.0f, 1 };
-	m_glass->shadingModel = 4;
-	m_glass->ior = 1.125;
-	m_glass->metallicFactor = 1.f;
+	m_glass->diffuseColor = glm::vec4{ 0.725, 0.71, 0.68, 1 };
+
 
 	// Create prefabs
 	// --------------
@@ -204,9 +203,9 @@ void Scene::cornell_scene()
 	Prefab* p_green_quad = Prefab::GET("quad", Mesh::get_cube());
 	p_green_quad->_root[0]->addMaterial(m_green);
 	Prefab* p_helmet = Prefab::GET("DamagedHelmet.gltf");
-	Prefab* p_mirror_sphere = Prefab::GET("mirror_sphere", Mesh::GET("sphere.obj"));
+	Prefab* p_mirror_sphere = Prefab::GET("mirror_sphere", Mesh::GET("cube.obj"));
 	p_mirror_sphere->_root[0]->addMaterial(m_mirror);
-	Prefab* p_glass_sphere = Prefab::GET("glass_sphere", Mesh::GET("sphere.obj"));
+	Prefab* p_glass_sphere = Prefab::GET("glass_sphere", Mesh::GET("cube.obj"));
 	p_glass_sphere->_root[0]->addMaterial(m_glass);
 
 	// Create entities
@@ -247,13 +246,16 @@ void Scene::cornell_scene()
 
 	Object* glass_sphere = new Object();
 	glass_sphere->prefab = p_glass_sphere;
-	glass_sphere->m_matrix = glm::translate(glm::mat4(1), glm::vec3(-3.f, 2.2f, -2.5f)) * 
-		glm::scale(glm::mat4(1), glm::vec3(2));
+	glass_sphere->m_matrix = glm::translate(glm::mat4(1), glm::vec3(-2.0f, 3.f, -6.5f)) * 
+		glm::rotate(glm::mat4(1), glm::radians(15.0f), glm::vec3(0, 1, 0)) *
+		glm::scale(glm::mat4(1), glm::vec3(3, 6, 2.5));
 	glass_sphere->material = Material::_materials[p_glass_sphere->_root[0]->_primitives[0]->materialID];
 
 	Object* mirror_sphere = new Object();
 	mirror_sphere->prefab = p_mirror_sphere;
-	mirror_sphere->m_matrix = glm::translate(glm::mat4(1), glm::vec3(3.5f, 1.f, -2.5f));
+	mirror_sphere->m_matrix = glm::translate(glm::mat4(1), glm::vec3(2.f, 1.5f, -4.f)) *
+		glm::rotate(glm::mat4(1), glm::radians(-15.0f), glm::vec3(0, 1, 0))*
+		glm::scale(glm::mat4(1), glm::vec3(3, 3, 3));
 	mirror_sphere->material = Material::_materials[p_mirror_sphere->_root[0]->_primitives[0]->materialID];
 
 	Object* helmet = new Object();
@@ -268,5 +270,5 @@ void Scene::cornell_scene()
 	_entities.push_back(wall4);
 	_entities.push_back(glass_sphere);
 	_entities.push_back(mirror_sphere);
-	_entities.push_back(helmet);
+	//_entities.push_back(helmet);
 }

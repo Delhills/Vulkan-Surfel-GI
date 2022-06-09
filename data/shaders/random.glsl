@@ -54,3 +54,33 @@ void createCoordSystem(in vec3 N, out vec3 tangent, out vec3 binormal)
 		tangent = vec3(0, -N.z, N.y) / sqrt(N.y * N.y + N.z * N.z);
 	binormal = cross(N, tangent); 
 };
+
+vec2 hash2(inout float seed) {
+    return fract(sin(vec2(seed+=0.1,seed+=0.1))*vec2(43758.5453123,22578.1459123));
+}
+
+vec3 cosineSampleHemisphere(vec3 n, inout float seed)
+{
+    vec2 u = hash2(seed);
+
+    float r = sqrt(u.x);
+    float theta = 2.0 * 3.141592 * u.y;
+ 
+    vec3  B = normalize( cross( n, vec3(0.0,1.0,1.0) ) );
+	vec3  T = cross( B, n );
+    
+    return normalize(r * sin(theta) * B + sqrt(1.0 - u.x) * n + r * cos(theta) * T);
+}
+
+
+vec3 uniformSampleHemisphere(vec3 N, inout float seed) {
+    vec2 u = hash2(seed);
+    
+    float r = sqrt(1.0 - u.x * u.x);
+    float phi = 2.0 * 3.141592 * u.y;
+    
+    vec3  B = normalize( cross( N, vec3(0.0,1.0,1.0) ) );
+	vec3  T = cross( B, N );
+    
+    return normalize(r * sin(phi) * B + u.x * N + r * cos(phi) * T);
+}

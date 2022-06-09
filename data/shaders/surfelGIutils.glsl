@@ -31,21 +31,29 @@ struct SurfelGridCell
 
 struct SurfelData
 {
+	uvec2 primitiveID;
+	uint bary;
 	uint uid;
 
 	vec3 mean;
-	vec3 shortMean;
+	uint life;
 
+	vec3 shortMean;
 	float vbbr;
 
-	vec3 hitpos;
-	uint hitnormal;
+	vec3 variance;
+	float inconsistency;
 
-	vec3 hitenergy;
+	vec3 hitpos;
 	float padding0;
 
-	vec3 traceresult;
+	vec3 hitnormal;
 	float padding1;
+
+	vec3 hitenergy;
+	float padding2;
+
+	vec3 traceresult;
 };
 
 bool surfel_cellvalid(ivec3 cell){

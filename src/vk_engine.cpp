@@ -42,7 +42,7 @@ void VulkanEngine::init()
 	init_upload_commands();
 
 	_scene = new Scene();
-	_scene->create_scene(0);
+	_scene->create_scene(1);
 
 	init_ray_tracing();
 
@@ -796,27 +796,27 @@ void VulkanEngine::updateCameraMatrices()
 		vmaUnmapMemory(_allocator, renderer->_cameraBuffer._allocation);
 	}
 
-	//void* frameData;
-	//vmaMapMemory(_allocator, renderer->_frameCountBuffer._allocation, &frameData);
-	//memcpy(frameData, &_denoise_frame, sizeof(int));
-	//vmaUnmapMemory(_allocator, renderer->_frameCountBuffer._allocation);
+	void* frameData;
+	vmaMapMemory(_allocator, renderer->_frameCountBuffer._allocation, &frameData);
+	memcpy(frameData, &_denoise_frame, sizeof(int));
+	vmaUnmapMemory(_allocator, renderer->_frameCountBuffer._allocation);
 
 	// Copy RAY-TRACING camera, it need the inverse
 	// --------------------------------------------
 	// TODO: rethink how frame can be passed each frame and update the matrix only if changed
 
-	// Copy ray tracing camera, it need the inverse
-	//RTCameraData rtCamera;
-	//rtCamera.invProj = glm::inverse(projection);
-	//rtCamera.invView = glm::inverse(view);
-	//rtCamera.frame = !_denoise ? glm::vec4(0) : glm::vec4(_denoise_frame);
+	//Copy ray tracing camera, it need the inverse
+	RTCameraData rtCamera;
+	rtCamera.invProj = glm::inverse(projection);
+	rtCamera.invView = glm::inverse(view);
+	rtCamera.frame = !_denoise ? glm::vec4(0) : glm::vec4(_denoise_frame);
 
-	////std::cout << _denoise_frame << std::endl;
+	//std::cout << _denoise_frame << std::endl;
 
-	//void* rtCameraData;
-	//vmaMapMemory(_allocator, renderer->_rtCameraBuffer._allocation, &rtCameraData);
-	//memcpy(rtCameraData, &rtCamera, sizeof(RTCameraData));
-	//vmaUnmapMemory(_allocator, renderer->_rtCameraBuffer._allocation);
+	void* rtCameraData;
+	vmaMapMemory(_allocator, renderer->_rtCameraBuffer._allocation, &rtCameraData);
+	memcpy(rtCameraData, &rtCamera, sizeof(RTCameraData));
+	vmaUnmapMemory(_allocator, renderer->_rtCameraBuffer._allocation);
 }
 
 VkPipeline PipelineBuilder::build_pipeline(VkDevice device, VkRenderPass pass)

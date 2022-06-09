@@ -66,6 +66,12 @@ float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
 	return ggx1 * ggx2;
 }
 
+vec3 F_Schlick(const vec3 f0, float f90, float VoH)
+{
+	// Schlick 1994, "An Inexpensive BRDF Model for Physically-Based Rendering"
+	return f0 + (f90 - f0) * pow(1.0 - VoH, 5);
+}
+
 // Fresnel Equation
 vec3 FresnelSchlick(float cosTheta, vec3 F0)
 {

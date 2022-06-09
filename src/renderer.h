@@ -51,13 +51,15 @@ struct SurfelData
 	float inconsistency;
 
 	glm::vec3 hitpos;
-	unsigned int hitnormal;
-
-	glm::vec3 hitenergy;
 	float padding0;
 
-	glm::vec3 traceresult;
+	glm::vec3 hitnormal;
 	float padding1;
+
+	glm::vec3 hitenergy;
+	float padding2;
+
+	glm::vec3 traceresult;
 };
 
 struct SurfelGridCell
@@ -438,6 +440,8 @@ private:
 
 	void surfel_ray_tracing();
 
+	void surfel_shade();
+
 
 	//void transitionBufferLayout(VkBuffer buffer, size_t size, VkAccessFlagBits oldLayout, VkAccessFlagBits newLayout, VkCommandBuffer cmd);
 
@@ -510,6 +514,8 @@ private:
 
 	// HYBRID
 	void create_hybrid_descriptors();
+
+	uint32_t alignedSize(uint32_t value, uint32_t alignment);
 
 	//void build_hybrid_command_buffers();
 };

@@ -67,11 +67,12 @@ Renderer::Renderer(Scene* scene)
 	create_SurfelGi_resources();
 	surfel_position();
 	prepare_indirect();
-	grid_reset();
+	//grid_reset();
 	update_surfels();
-	grid_offset();
-	surfel_binning();
+	//grid_offset();
+	//surfel_binning();
 	surfel_ray_tracing();
+	surfel_shade();
 	//todo_de_nuevo();
 }
 
@@ -114,6 +115,7 @@ void Renderer::init_commands()
 	VK_CHECK(vkAllocateCommandBuffers(*device, &cmdPostAllocInfo, &_GridOffsetCmdBuffer));
 	VK_CHECK(vkAllocateCommandBuffers(*device, &cmdPostAllocInfo, &_SurfelBinningCmdBuffer));
 	VK_CHECK(vkAllocateCommandBuffers(*device, &cmdPostAllocInfo, &_SurfelRTXCommandBuffer));
+	VK_CHECK(vkAllocateCommandBuffers(*device, &cmdPostAllocInfo, &_SurfelShadeCmdBuffer));
 
 	VulkanEngine::engine->_mainDeletionQueue.push_function([=]() {
 		vkDestroyCommandPool(*device, _commandPool, nullptr);
@@ -484,10 +486,19 @@ void Renderer::render()
 	//VK_CHECK(vkQueueSubmit(VulkanEngine::engine->_graphicsQueue, 1, &submit, VK_NULL_HANDLE));
 	//vkQueueWaitIdle(VulkanEngine::engine->_graphicsQueue);
 
-	////update
+	//update
 	submit.pWaitSemaphores = &_SurfelPositionSemaphore;
 	submit.pSignalSemaphores = &_UpdateSurfelsSemaphore;
 	submit.pCommandBuffers = &_SurfelRTXCommandBuffer;
+
+	VK_CHECK(vkQueueSubmit(VulkanEngine::engine->_graphicsQueue, 1, &submit, VK_NULL_HANDLE));
+	vkQueueWaitIdle(VulkanEngine::engine->_graphicsQueue);
+
+
+
+	submit.pWaitSemaphores = &_UpdateSurfelsSemaphore;
+	submit.pSignalSemaphores = &_SurfelShadeSemaphore;
+	submit.pCommandBuffers = &_SurfelShadeCmdBuffer;
 
 	VK_CHECK(vkQueueSubmit(VulkanEngine::engine->_graphicsQueue, 1, &submit, VK_NULL_HANDLE));
 	vkQueueWaitIdle(VulkanEngine::engine->_graphicsQueue);
@@ -531,7 +542,7 @@ void Renderer::render()
 	build_deferred_command_buffer();
 
 	// Second pass
-	submit.pWaitSemaphores			= &_UpdateSurfelsSemaphore;
+	submit.pWaitSemaphores			= &_SurfelShadeSemaphore;
 	submit.pSignalSemaphores		= &get_current_frame()._renderSemaphore;
 	submit.pCommandBuffers			= &get_current_frame()._mainCommandBuffer;
 	VK_CHECK(vkQueueSubmit(VulkanEngine::engine->_graphicsQueue, 1, &submit, get_current_frame()._renderFence));
@@ -1010,6 +1021,7 @@ void Renderer::init_deferred_descriptors()
 	VkDescriptorSetLayoutBinding emissiveBinding	= vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 8); // Emissive
 	VkDescriptorSetLayoutBinding environtmentBinding = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 9);
 	VkDescriptorSetLayoutBinding surfelDebugBinding = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 10);
+	VkDescriptorSetLayoutBinding surfelResultBinding = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 11);
 
 	std::vector<VkDescriptorSetLayoutBinding> setLayoutBindings =
 	{
@@ -1023,7 +1035,8 @@ void Renderer::init_deferred_descriptors()
 		cameraBinding,
 		emissiveBinding,
 		environtmentBinding,
-		surfelDebugBinding
+		surfelDebugBinding,
+		surfelResultBinding
 	};
 
 	VkDescriptorSetLayoutCreateInfo setInfo = {};
@@ -1090,6 +1103,10 @@ void Renderer::init_deferred_descriptors()
 		VkDescriptorImageInfo debugGIdesc = vkinit::descriptor_image_info(
 			_debugGI.imageView, VK_IMAGE_LAYOUT_GENERAL, _offscreenSampler);	
 
+		//B 11 debug gi
+		VkDescriptorImageInfo resultGIdesc = vkinit::descriptor_image_info(
+			_result.imageView, VK_IMAGE_LAYOUT_GENERAL, _offscreenSampler);
+
 
 		VkWriteDescriptorSet positionWrite		= vkinit::write_descriptor_image(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, _frames[i].deferredDescriptorSet, &texDescriptorPosition, 0);
 		VkWriteDescriptorSet normalWrite		= vkinit::write_descriptor_image(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, _frames[i].deferredDescriptorSet, &texDescriptorNormal, 1);
@@ -1102,6 +1119,7 @@ void Renderer::init_deferred_descriptors()
 		VkWriteDescriptorSet emissiveWrite		= vkinit::write_descriptor_image(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, _frames[i].deferredDescriptorSet, &texDescriptorEmissive, 8);
 		VkWriteDescriptorSet environmentWrite	= vkinit::write_descriptor_image(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, _frames[i].deferredDescriptorSet, &environmentDesc, 9);
 		VkWriteDescriptorSet debugGIWrite		= vkinit::write_descriptor_image(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, _frames[i].deferredDescriptorSet, &debugGIdesc, 10);
+		VkWriteDescriptorSet resultGIWrite		= vkinit::write_descriptor_image(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, _frames[i].deferredDescriptorSet, &resultGIdesc, 11);
 
 		std::vector<VkWriteDescriptorSet> writes = {
 			positionWrite,
@@ -1114,7 +1132,8 @@ void Renderer::init_deferred_descriptors()
 			cameraWrite,
 			emissiveWrite,
 			environmentWrite,
-			debugGIWrite
+			debugGIWrite,
+			resultGIWrite
 		};
 
 		vkUpdateDescriptorSets(*device, static_cast<uint32_t>(writes.size()), writes.data(), 0, nullptr);
@@ -1473,6 +1492,8 @@ void Renderer::load_data_to_gpu()
 		VulkanEngine::engine->create_buffer(sizeof(uint32_t), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU, _debugBuffer);
 	if (!_cameraPositionBuffer._buffer)
 		VulkanEngine::engine->create_buffer(sizeof(glm::vec3), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU, _cameraPositionBuffer);
+	if (!_frameCountBuffer._buffer)
+		VulkanEngine::engine->create_buffer(sizeof(sizeof(int)), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU, _frameCountBuffer);
 
 	// Raytracing data
 	const unsigned int nLights		= _scene->_lights.size();
@@ -1530,6 +1551,12 @@ void Renderer::create_storage_image()
 	VkImageCreateInfo debugImageInfo = vkinit::image_create_info(VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, extent);
 	debugImageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
+
+	VkImageCreateInfo resutlGIinfo = vkinit::image_create_info(VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, extent);
+	resutlGIinfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+	
+
 	VmaAllocationCreateInfo allocInfo{};
 	allocInfo.usage			= VMA_MEMORY_USAGE_GPU_ONLY;
 	allocInfo.requiredFlags = VkMemoryPropertyFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
@@ -1545,6 +1572,14 @@ void Renderer::create_storage_image()
 
 	VkImageViewCreateInfo dubugImageViewInfo = vkinit::image_view_create_info(VK_FORMAT_R8G8B8A8_UNORM, _debugGI.image._image, VK_IMAGE_ASPECT_COLOR_BIT);
 	VK_CHECK(vkCreateImageView(*device, &dubugImageViewInfo, nullptr, &_debugGI.imageView));
+
+
+	vmaCreateImage(VulkanEngine::engine->_allocator, &resutlGIinfo, &allocInfo,
+		&_result.image._image, &_result.image._allocation, nullptr);
+
+	VkImageViewCreateInfo resultImageViewInfo = vkinit::image_view_create_info(VK_FORMAT_R16G16B16A16_SFLOAT, _result.image._image, VK_IMAGE_ASPECT_COLOR_BIT);
+	VK_CHECK(vkCreateImageView(*device, &resultImageViewInfo, nullptr, &_result.imageView));
+
 
 	_shadowImages.reserve(_scene->_lights.size());
 
@@ -1620,12 +1655,30 @@ void Renderer::create_storage_image()
 		vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, nullptr, 0, nullptr, 1, barrier);
 		});
 
+
+	VulkanEngine::engine->immediate_submit([&](VkCommandBuffer cmd) {
+		VkImageMemoryBarrier imageMemoryBarrier{};
+		imageMemoryBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+		imageMemoryBarrier.image = _result.image._image;
+		imageMemoryBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		imageMemoryBarrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+		imageMemoryBarrier.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+
+		VkImageMemoryBarrier barrier[] = { imageMemoryBarrier };
+
+		vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, nullptr, 0, nullptr, 1, barrier);
+		});
+
 	VulkanEngine::engine->_mainDeletionQueue.push_function([=]() {
 		vmaDestroyImage(VulkanEngine::engine->_allocator, _rtImage.image._image, _rtImage.image._allocation);
 		vkDestroyImageView(*device, _rtImage.imageView, nullptr);
 
 		vmaDestroyImage(VulkanEngine::engine->_allocator, _debugGI.image._image, _debugGI.image._allocation);
 		vkDestroyImageView(*device, _debugGI.imageView, nullptr);
+
+		vmaDestroyImage(VulkanEngine::engine->_allocator, _result.image._image, _result.image._allocation);
+		vkDestroyImageView(*device, _result.imageView, nullptr);
+
 		for (int i = 0; i < _shadowImages.size(); i++)
 		{
 			vmaDestroyImage(VulkanEngine::engine->_allocator, _shadowImages[i].image._image, _shadowImages[i].image._allocation);
@@ -1666,8 +1719,16 @@ void Renderer::create_bottom_acceleration_structure()
 			VkDeviceOrHostAddressConstKHR vertexBufferDeviceAddress{};
 			VkDeviceOrHostAddressConstKHR indexBufferDeviceAddress{};
 
-			vertexBufferDeviceAddress.deviceAddress = VulkanEngine::engine->getBufferDeviceAddress(obj->prefab->_mesh->_vertexBuffer._buffer);
-			indexBufferDeviceAddress.deviceAddress = VulkanEngine::engine->getBufferDeviceAddress(obj->prefab->_mesh->_indexBuffer._buffer);
+			VkBufferDeviceAddressInfoKHR bufferDeviceAddressInfo{};
+			bufferDeviceAddressInfo.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
+			bufferDeviceAddressInfo.buffer = obj->prefab->_mesh->_vertexBuffer._buffer;
+
+
+			vertexBufferDeviceAddress.deviceAddress = VulkanEngine::engine->vkGetBufferDeviceAddressKHR(*device, &bufferDeviceAddressInfo);
+
+			bufferDeviceAddressInfo.buffer = obj->prefab->_mesh->_indexBuffer._buffer;
+
+			indexBufferDeviceAddress.deviceAddress = VulkanEngine::engine->vkGetBufferDeviceAddressKHR(*device, &bufferDeviceAddressInfo);
 
 			for (Node* root : p->_root)
 			{
@@ -2972,6 +3033,15 @@ void Renderer::surfel_ray_tracing()
 	create_surfel_rtx_cmd_buffer();
 }
 
+void Renderer::surfel_shade()
+{
+	create_surfel_shade_descriptors();
+
+	init_surfel_shade_pipeline();
+
+	build_surfel_shade_buffer();
+}
+
 
 //------------------------------------------------------------------- Coverage
 
@@ -2999,6 +3069,7 @@ void Renderer::create_surfel_position_descriptors()
 	VkDescriptorSetLayoutBinding depthBinding = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_COMPUTE_BIT, 7);
 
 	VkDescriptorSetLayoutBinding debugImageLayoutBinding = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, VK_SHADER_STAGE_COMPUTE_BIT, 8);
+	VkDescriptorSetLayoutBinding resultImageLayoutBinding = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, VK_SHADER_STAGE_COMPUTE_BIT, 9);
 
 
 	std::vector<VkDescriptorSetLayoutBinding> setLayoutBindings =
@@ -3011,7 +3082,8 @@ void Renderer::create_surfel_position_descriptors()
 		_GridBufferBinding,
 		_CellBufferBinding,
 		cameraBufferBinding,
-		debugImageLayoutBinding
+		debugImageLayoutBinding,
+		resultImageLayoutBinding
 	};
 
 	
@@ -3054,6 +3126,8 @@ void Renderer::create_surfel_position_descriptors()
 
 	VkDescriptorImageInfo debugImageDescriptor = vkinit::descriptor_image_info(_debugGI.imageView, VK_IMAGE_LAYOUT_GENERAL);
 
+	VkDescriptorImageInfo resultImageDescriptor = vkinit::descriptor_image_info(_result.imageView, VK_IMAGE_LAYOUT_GENERAL);
+
 
 	VkWriteDescriptorSet surfelBufferWrite = vkinit::write_descriptor_buffer(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, _SurfelPositionDescSet, &surfelDescInfo, 0);
 	VkWriteDescriptorSet normalWrite = vkinit::write_descriptor_image(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, _SurfelPositionDescSet, &texDescriptorNormal, 1);
@@ -3064,6 +3138,7 @@ void Renderer::create_surfel_position_descriptors()
 	VkWriteDescriptorSet cameraWrite = vkinit::write_descriptor_buffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, _SurfelPositionDescSet, &cameraBufferInfo, 6);
 	VkWriteDescriptorSet depthWrite = vkinit::write_descriptor_image(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, _SurfelPositionDescSet, &depthDescriptorDepth, 7);
 	VkWriteDescriptorSet debugWrite = vkinit::write_descriptor_image(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, _SurfelPositionDescSet, &debugImageDescriptor, 8);
+	VkWriteDescriptorSet resultWrite = vkinit::write_descriptor_image(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, _SurfelPositionDescSet, &resultImageDescriptor, 9);
 
 	std::vector<VkWriteDescriptorSet> DescriptorWrites =
 	{
@@ -3075,7 +3150,8 @@ void Renderer::create_surfel_position_descriptors()
 		GridWrite,
 		CellWrite,
 		cameraWrite,
-		debugWrite
+		debugWrite,
+		resultWrite
 	};
 
 	//vkUpdateDescriptorSets(*device, 1, &_PositionBufferWrite, 0, VK_NULL_HANDLE);
@@ -3301,6 +3377,12 @@ void Renderer::build_prepare_indirect_buffer()
 
 	//VkCommandBuffer& cmd = _PrepareIndirectCmdBuffer;
 	VkCommandBuffer& cmd = _SurfelPositionCmd;
+
+	//VkCommandBufferBeginInfo beginInfo = vkinit::command_buffer_begin_info(VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT);
+
+	//VkCommandBuffer& cmd = _SurfelPositionCmd;
+
+	//VK_CHECK(vkBeginCommandBuffer(cmd, &beginInfo));
 
 	//VK_CHECK(vkBeginCommandBuffer(cmd, &beginInfo));
 
@@ -3673,6 +3755,8 @@ void Renderer::build_update_surfels_buffer()
 		1, &bufferbarrierdesc2,
 		0, nullptr
 	);
+
+	VK_CHECK(vkEndCommandBuffer(cmd));
 
 	//VK_CHECK(vkEndCommandBuffer(cmd));
 }
@@ -4361,9 +4445,6 @@ void Renderer::create_surfel_rtx_pipeline()
 		shaderGroup.closestHitShader = static_cast<uint32_t>(SurfelShaderStages.size()) - 1;
 		shaderGroup.anyHitShader = VK_SHADER_UNUSED_KHR;
 		shaderGroup.intersectionShader = VK_SHADER_UNUSED_KHR;
-		shaderGroups.push_back(shaderGroup);
-
-		shaderGroup.closestHitShader = static_cast<uint32_t>(SurfelShaderStages.size()) - 1;
 		surfelShaderGroups.push_back(shaderGroup);
 	}
 
@@ -4406,10 +4487,10 @@ void Renderer::create_surfel_rtx_pipeline()
 void Renderer::create_surfel_rtx_SBT()
 {
 	const uint32_t handleSize = VulkanEngine::engine->_rtProperties.shaderGroupHandleSize;
-	const uint32_t groupCount = static_cast<uint32_t>(surfelShaderGroups.size());
+	const uint32_t handleSizeAligned = alignedSize(VulkanEngine::engine->_rtProperties.shaderGroupHandleSize, VulkanEngine::engine->_rtProperties.shaderGroupHandleAlignment);
 
-	const uint32_t handleAlignment = VulkanEngine::engine->_rtProperties.shaderGroupHandleAlignment;
-	const uint32_t sbtSize = groupCount * handleSize;
+	const uint32_t groupCount = static_cast<uint32_t>(surfelShaderGroups.size());
+	const uint32_t sbtSize = groupCount * handleSizeAligned;
 
 
 
@@ -4428,9 +4509,9 @@ void Renderer::create_surfel_rtx_SBT()
 	vmaMapMemory(VulkanEngine::engine->_allocator, _SurfelRTXraygenSBT._allocation, &rayGenData);
 	memcpy(rayGenData, shaderHandleStorage.data(), handleSize);
 	vmaMapMemory(VulkanEngine::engine->_allocator, _SurfelRTXmissSBT._allocation, &missData);
-	memcpy(missData, shaderHandleStorage.data() + handleAlignment, handleSize * 2);
+	memcpy(missData, shaderHandleStorage.data() + handleSizeAligned, handleSize);
 	vmaMapMemory(VulkanEngine::engine->_allocator, _SurfelRTXhitSBT._allocation, &hitData);
-	memcpy(hitData, shaderHandleStorage.data() + handleAlignment * 3, handleSize);
+	memcpy(hitData, shaderHandleStorage.data() + handleSizeAligned * 2, handleSize);
 
 	vmaUnmapMemory(VulkanEngine::engine->_allocator, _SurfelRTXraygenSBT._allocation);
 	vmaUnmapMemory(VulkanEngine::engine->_allocator, _SurfelRTXmissSBT._allocation);
@@ -4559,7 +4640,7 @@ void Renderer::create_surfel_shade_descriptors()
 	surfelShadeDescriptorSetLayoutCreateInfo.pBindings = setLayoutBindings.data();
 	VK_CHECK(vkCreateDescriptorSetLayout(*device, &surfelShadeDescriptorSetLayoutCreateInfo, nullptr, &_SurfelShadeDescSetLayout));
 
-	VkDescriptorSetAllocateInfo surfelShadeDescriptorSetAllocateInfo = vkinit::descriptor_set_allocate_info(_SurfelShadeDescPool, &_SurfelBinningDescSetLayout, 1);
+	VkDescriptorSetAllocateInfo surfelShadeDescriptorSetAllocateInfo = vkinit::descriptor_set_allocate_info(_SurfelShadeDescPool, &_SurfelShadeDescSetLayout, 1);
 	VK_CHECK(vkAllocateDescriptorSets(*device, &surfelShadeDescriptorSetAllocateInfo, &_SurfelShadeDescSet));
 
 
@@ -4637,10 +4718,9 @@ void Renderer::build_surfel_shade_buffer()
 {
 	VkCommandBufferBeginInfo beginInfo = vkinit::command_buffer_begin_info(VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT);
 
-	//VkCommandBuffer& cmd = _SurfelBinningCmdBuffer;
 	VkCommandBuffer& cmd = _SurfelShadeCmdBuffer;
 
-	//VK_CHECK(vkBeginCommandBuffer(cmd, &beginInfo));
+	VK_CHECK(vkBeginCommandBuffer(cmd, &beginInfo));
 
 	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _SurfelShadePipeline);
 	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _SurfelShadePipelineLayout, 0, 1, &_SurfelShadeDescSet, 0, nullptr);
@@ -5144,6 +5224,11 @@ void Renderer::create_hybrid_descriptors()
 		vkDestroyDescriptorSetLayout(*device, _hybridDescSetLayout, nullptr);
 		vkDestroySampler(*device, sampler, nullptr);
 		});
+}
+
+uint32_t Renderer::alignedSize(uint32_t value, uint32_t alignment)
+{
+	return (value + alignment - 1) & ~(alignment - 1);
 }
 
 

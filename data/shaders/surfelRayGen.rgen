@@ -54,37 +54,56 @@ void main()
 
 	int surfel_index = int(gl_LaunchIDEXT.x);
 
+	prd.surfel_index = surfel_index;
+
 	SurfelData surfel_data = surfelsData.surfelDataInBuffer[surfel_index];
 	Surfel surfel = surfels.surfelInBuffer[surfel_index];
 	
 	vec3 n = normalize(surfel.normal);
 
 	uint frame = int(cam.frame.x);
-	prd.seed = tea(gl_LaunchIDEXT.y * gl_LaunchSizeEXT.x + gl_LaunchIDEXT.x, frame);
+	//float seed = tea(float(surfel_index) / float(SURFEL_CAPACITY), frame);
 
-	float seed = 0.123456;
-	vec2 uv = vec2(fract(frame / 4096.0), float(surfel_index) / float(SURFEL_CAPACITY));
 
-	float tmin 				= 0.001;
-	float tmax 				= 1000.0;
+	//float seed = fract(frame / 4096.0) + (float(surfel_index) / float(SURFEL_CAPACITY) * 3.43121412313);
+	
+	float seed = frame  + float(surfel_index)  * 3.43121412313;
+	//float seed = 0.123456;
+	//vec2 uv = vec2(fract(float(frame) / 4096.0), float(surfel_index) / float(SURFEL_CAPACITY));
+
+	float tmin 				= 0.01;
+	float tmax 				= 100.0;
 
 	vec3 finalColor 		= vec3(0);
 	vec3 origin 			= surfel.position;
-	vec3 direction 			= normalize(SampleHemisphere_cos(n, seed, uv)); //el sample cos ese
+	
+	//vec3 direction 			= normalize(uniformSampleHemisphere(n, seed));
+	vec3 direction 			= normalize(cosineSampleHemisphere(n, seed));
+	//vec3 direction 			= SampleHemisphere_cos(-n, seed, uv);
 
-	//vec3 direction 			= n;
-	float attenuation 		= 1.0;
-	float shadowFactor		= 0.0;
-	vec3 rayColor = vec3(0.0);
+
+
+	prd.colorAndDist = vec4(0.0);
+	prd.energy = vec4(1.0);
 
 	traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, origin.xyz + direction * 1e-2, tmin, direction, tmax, 0);
 
-	vec3 result = vec3(0);
-	vec3 energy = vec3(1);
 
-	rayColor = prd.colorAndDist.xyz;
-	surfel.color = rayColor;
 
-	surfels.surfelInBuffer[surfel_index] = surfel;
+
+	// Light light 				    = lightsBuffer.lights[0];
+
+	// vec3 color = light.color.xyz;
+	
+	surfel_data.hitenergy = prd.energy.xyz;
+	surfel_data.traceresult = prd.colorAndDist.xyz;
+
+	//surfel.color = rayColor;
+
+	//surfel.color = vec3(1.0, 0.0, 1.0);
+
+
+	//surfels.surfelInBuffer[surfel_index] = surfel;
+	surfelsData.surfelDataInBuffer[surfel_index] = surfel_data;
 
 }

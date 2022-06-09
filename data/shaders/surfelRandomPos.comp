@@ -41,7 +41,8 @@ layout (binding = 6) uniform CameraBuffer
 	float far;
 } cameraData;
 layout (binding = 7) uniform sampler2D depthTexture;
-layout (binding = 8, rgba8) uniform image2D image;
+layout (binding = 8, rgba8) uniform image2D debugImage;
+layout (binding = 9, rgba16f) uniform image2D image;
 
 
 shared uint minTile;
@@ -81,6 +82,7 @@ void main()
 	//N = (N*2) - 1;
 	
 	if((vec4normal.a == 0.0)){
+		imageStore(debugImage, ivec2(gl_GlobalInvocationID.xy), vec4(0.0, 0.0, 0.0, 0.0));
 		imageStore(image, ivec2(gl_GlobalInvocationID.xy), vec4(0.0, 0.0, 0.0, 0.0));
 		return;
 	}
@@ -103,7 +105,7 @@ void main()
 
 	if (!surfel_cellvalid(gridpos))
 	{
-		imageStore(image, ivec2(gl_GlobalInvocationID.xy), vec4(0.0, 0.0, 0.0, 0.0));
+		imageStore(debugImage, ivec2(gl_GlobalInvocationID.xy), vec4(0.0, 0.0, 0.0, 0.0));
 		return;
 	}
 
@@ -174,7 +176,8 @@ void main()
 			}
 			if (dist2 <= (0.05 * 0.05)){
 				
-				debug = vec4(surfel.color, 1.0);
+				debug = vec4(1.0, 0.0, 1.0, 1.0);
+				//color = vec4(surfel.color, 1.0);
 				//debug = vec4(1.0, 0.0, 0.0, 0.0);
 				//imageStore(image, ivec2(gl_GlobalInvocationID.xy), vec4(1.0, 0.0, 0.0, 0.0));
 			}
@@ -240,12 +243,14 @@ void main()
 		surfel_alloc = atomicAdd(statsBuffer.stats[0], 1);
 		if (surfel_alloc < SURFEL_CAPACITY){
 			surfels.surfelInBuffer[surfel_alloc].position = P;
-			surfels.surfelInBuffer[surfel_alloc].normal = N;//int(pushC.camPos.x);
+			surfels.surfelInBuffer[surfel_alloc].normal = N;
+//int(pushC.camPos.x);
 			//surfels.surfelInBuffer[surfel_alloc].color = color.rgb;
 			// surfels.surfelInBuffer[surfel_alloc].pad0 = float(gl_GlobalInvocationID.x);
 			// surfels.surfelInBuffer[surfel_alloc].pad1 = float(gl_GlobalInvocationID.y);
 		}
 	}
 	
-	imageStore(image, ivec2(gl_GlobalInvocationID.xy), debug);
+	imageStore(debugImage, ivec2(gl_GlobalInvocationID.xy), debug);
+	imageStore(image, ivec2(gl_GlobalInvocationID.xy), color);
 }

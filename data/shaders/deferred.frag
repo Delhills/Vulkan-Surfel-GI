@@ -20,6 +20,7 @@ layout (set = 0, binding = 6) uniform sampler2D materialTexture;
 layout (set = 0, binding = 8) uniform sampler2D emissiveTexture;
 layout (set = 0, binding = 9) uniform sampler2D environmentTexture;
 layout (set = 0, binding = 10) uniform sampler2D debugGI;
+layout (set = 0, binding = 11) uniform sampler2D resultGI;
 
 const float PI = 3.14159265359;
 
@@ -37,7 +38,9 @@ void main()
 	vec3 material 	= texture(materialTexture, inUV).xyz;
 	vec3 emissive 	= texture(emissiveTexture, inUV).xyz;
 
-	vec3 debugGI 	= texture(debugGI, inUV).xyx;
+	vec4 debugGI 	= texture(debugGI, inUV);
+
+	vec4 resultGI 	= texture(resultGI, inUV);
 
 	bool background = texture(positionTexture, inUV).w == 0 && texture(normalTexture, inUV).w == 0;
 	float metallic 	= material.z;
@@ -119,6 +122,10 @@ void main()
 			Lo += (kD * pow(albedo, vec3(2.2)) / PI + specular) * radiance * NdotL;
 		}
 	}
+
+	vec3 indirect = clamp(vec3(0.0), vec3(0.999), resultGI.xyz);
+
+	indirect = indirect / (vec3(1.0) + indirect);
 	
 	if(!background){
 		// Ambient from IBL
@@ -127,19 +134,24 @@ void main()
   		vec3 diffuse = kD * albedo * irradiance;
   		vec3 ambient = diffuse;
 
-		color = Lo + ambient;
+
+		color = Lo + indirect;// * 0.3;
 		color += emissive;
 	}
 	else{
 		color = albedo;
 	}
-	if(debugGI.x != 0){
+	if(debugGI.x != 0 || debugGI.y != 0 || debugGI.z != 0|| debugGI.w != 0){
 		//outFragColor = vec4(debugGI, 1.0 );
 		//return;
 
-		color = debugGI;
+		//color = debugGI.xyz;
 	}
-	outFragColor = vec4( color, 1.0f );
+	else{
+		//color = resultGI.xyz;
+	}
+
+	outFragColor = vec4( color.xyz, 1.0f );
 
 }
 
