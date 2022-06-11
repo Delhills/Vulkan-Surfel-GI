@@ -181,11 +181,11 @@ void main()
 	result.rgb = result.rgb / result.a;
 	MultiscaleMeanEstimator(result.rgb, surfel_data);
 	//surfel.color = surfel_data.mean;
-
+	//surfel_data.mean = result.rgb;
 	
 	surfelsData.surfelDataInBuffer[surfel_index] = surfel_data;
 
-	surfels.surfelInBuffer[surfel_index] = surfel;
+	//surfels.surfelInBuffer[surfel_index] = surfel;
 
 
 }

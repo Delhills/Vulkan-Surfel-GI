@@ -106,6 +106,8 @@ void VulkanEngine::run()
 			_window->handleEvent(e, dt);
 		}
 
+		
+
 		update(dt);
 
 		//renderer->render_gui();
@@ -157,6 +159,13 @@ void VulkanEngine::update(const float dt)
 	}
 	memcpy(rtLightData, rtLightUBO, sizeof(rtLightUBO));
 	vmaUnmapMemory(_allocator, renderer->_lightBuffer._allocation);
+
+
+	void* debugData;
+	vmaMapMemory(VulkanEngine::engine->_allocator, renderer->_debugBuffer._allocation, &debugData);
+	memcpy(debugData, &debugTarget, sizeof(uint32_t));
+	vmaUnmapMemory(VulkanEngine::engine->_allocator, renderer->_debugBuffer._allocation);
+
 
 	// Shadow samples
 	//void* samplesData;

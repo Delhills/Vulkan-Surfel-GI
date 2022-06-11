@@ -3,6 +3,7 @@
 
 // CONSTS ----------------------
 const float PI = 3.14159265359;
+#define RECIPROCAL_PI 0.3183098861837697
 const int NSAMPLES = 1;
 const int SHADOWSAMPLES = 64;
 const int MAX_RECURSION = 8;
@@ -97,4 +98,14 @@ vec3 sampleDisk(Light light, vec3 position, vec3 L, uint seed)
     vec3 bitangent = normalize(cross(tangent, L));
     vec3 target = position + L + point.x * tangent + point.y * bitangent;
     return normalize(target - position);
+}
+
+vec3 degamma(vec3 c)
+{
+	return pow(c,vec3(2.2));
+}
+
+vec3 gamma(vec3 c)
+{
+	return pow(c,vec3(1.0/2.2));;
 }

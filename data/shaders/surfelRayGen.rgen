@@ -37,7 +37,7 @@ layout (set = 0, binding = 17) buffer SurfelDataBuffer {
 
 
 layout(location = 0) rayPayloadEXT hitPayload prd;
-layout(location = 1) rayPayloadEXT bool isShadowed;
+layout(location = 1) rayPayloadEXT bool shadowed;
 
 //layout (local_size_x = SURFEL_INDIRECT_NUMTHREADS, local_size_y = 1, local_size_z = 1) in;
 
@@ -67,7 +67,9 @@ void main()
 
 	//float seed = fract(frame / 4096.0) + (float(surfel_index) / float(SURFEL_CAPACITY) * 3.43121412313);
 	
-	float seed = frame  + float(surfel_index)  * 3.43121412313;
+	prd.seed = vec4(frame  + float(surfel_index)  * 3.43121412313);
+
+	prd.seed.y =  tea(surfel_index, frame);
 	//float seed = 0.123456;
 	//vec2 uv = vec2(fract(float(frame) / 4096.0), float(surfel_index) / float(SURFEL_CAPACITY));
 
@@ -78,7 +80,7 @@ void main()
 	vec3 origin 			= surfel.position;
 	
 	//vec3 direction 			= normalize(uniformSampleHemisphere(n, seed));
-	vec3 direction 			= normalize(cosineSampleHemisphere(n, seed));
+	vec3 direction 			= normalize(cosineSampleHemisphere(n, prd.seed.x));
 	//vec3 direction 			= SampleHemisphere_cos(-n, seed, uv);
 
 
@@ -88,6 +90,51 @@ void main()
 
 	traceRayEXT(topLevelAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, origin.xyz + direction * 1e-2, tmin, direction, tmax, 0);
 
+	float shadowFactor              = 1.0;
+	// for(int i = 0; i < lightsBuffer.lights.length(); i++)
+	// {
+	// 	// Init basic light information
+	// 	Light light						= lightsBuffer.lights[i];
+	// 	const bool isDirectional        = light.pos.w < 0;
+	// 	vec3 L							= isDirectional ? light.pos.xyz : (light.pos.xyz - surfel.position);
+
+
+	// 	const float light_max_distance 	= light.pos.w;
+	// 	const float light_distance		= length(L);
+	// 	L 								= normalize(L);
+
+	// 	//const float light_intensity		= (100.0 / (light_distance * light_distance));
+	// 	const float NdotL				= clamp(dot(surfel.normal, L), 0.0, 1.0);
+		
+
+	// 	if(NdotL > 0)
+	// 	{
+	// 		for(int a = 0; a < 1; a++)
+	// 		{
+	// 			// Init as shadowed
+	// 			shadowed 	        = true;
+	// 			// if(light_distance < light_max_distance)
+	// 			// {
+	// 			vec3 dir          = L;
+	// 			const uint flags  = gl_RayFlagsOpaqueEXT | gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsSkipClosestHitShaderEXT;
+	// 			float tmin = 0.001, tmax  = light_distance - 0.001;
+
+	// 			// Shadow ray cast
+	// 			traceRayEXT(topLevelAS, flags, 0xff, 0, 0, 1, 
+	// 			surfel.position.xyz + dir * 0.01, tmin, dir, tmax, 1);
+	// 			// }
+
+	// 			if(shadowed){
+	// 				shadowFactor = 0.0;
+	// 			}
+	// 			else{
+	// 				shadowFactor = 1.0;
+	// 			}
+	// 		}
+	// 	}
+	// }
+
+	
 
 
 
@@ -96,7 +143,7 @@ void main()
 	// vec3 color = light.color.xyz;
 	
 	surfel_data.hitenergy = prd.energy.xyz;
-	surfel_data.traceresult = prd.colorAndDist.xyz;
+	surfel_data.traceresult = prd.colorAndDist.xyz * shadowFactor;
 
 	//surfel.color = rayColor;
 

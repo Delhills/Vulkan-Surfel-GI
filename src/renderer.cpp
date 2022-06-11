@@ -67,7 +67,7 @@ Renderer::Renderer(Scene* scene)
 	create_SurfelGi_resources();
 	surfel_position();
 	prepare_indirect();
-	//grid_reset();
+	grid_reset();
 	update_surfels();
 	//grid_offset();
 	//surfel_binning();
@@ -2856,111 +2856,6 @@ void Renderer::create_SurfelGi_resources()
 	VulkanEngine::engine->create_buffer(sizeof(unsigned int) * SURFEL_CAPACITY * 27, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY, _SurfelCellBuffer);
 }
 
-void Renderer::todo_de_nuevo()
-{
-	//std::vector<VkDescriptorPoolSize> poolSize = {
-	//	{VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, 1},
-	//	{VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 100},
-	//	{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 10},
-	//	{VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 100},
-	//	{VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1}
-	//};
-
-	//VkDescriptorPoolCreateInfo descriptorPoolCreateInfo = vkinit::descriptor_pool_create_info(poolSize, 2);
-	//VK_CHECK(vkCreateDescriptorPool(*device, &descriptorPoolCreateInfo, nullptr, &_buffer2DescPool));
-
-	//VkDescriptorSetLayoutBinding frameLayoutBinding = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT, 0);
-
-	//VkDescriptorSetLayoutCreateInfo denoiseDescriptorSetLayoutCreateInfo = {};
-	//denoiseDescriptorSetLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-	//denoiseDescriptorSetLayoutCreateInfo.bindingCount = 1; // static_cast<uint32_t>(denoiseBindings.size());
-	//denoiseDescriptorSetLayoutCreateInfo.pBindings = &frameLayoutBinding; //denoiseBindings.data();
-	//VK_CHECK(vkCreateDescriptorSetLayout(*device, &denoiseDescriptorSetLayoutCreateInfo, nullptr, &_buffer2DescSetLayout));
-
-	//VkDescriptorSetAllocateInfo denoiseDescriptorSetAllocateInfo = vkinit::descriptor_set_allocate_info(_buffer2DescPool, &_buffer2DescSetLayout, 1);
-	//VK_CHECK(vkAllocateDescriptorSets(*device, &denoiseDescriptorSetAllocateInfo, &_buffer2DescSet));
-
-	////Binding = 2 Frame Count Buffer
-	//VulkanEngine::engine->create_buffer(sizeof(SurfelGridCell) * SURFEL_TABLE_SIZE, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU, _actualBuffer2);
-	//VkDescriptorBufferInfo frameDescInfo = vkinit::descriptor_buffer_info(_actualBuffer2._buffer, sizeof(SurfelGridCell) * SURFEL_TABLE_SIZE);
-	//
-	////VkDescriptorBufferInfo frameDescInfo = vkinit::descriptor_buffer_info(_frameCountBuffer._buffer, sizeof(Surfel) * SURFEL_CAPACITY);
-
-
-	//VkWriteDescriptorSet frameBufferWrite = vkinit::write_descriptor_buffer(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, _buffer2DescSet, &frameDescInfo, 0);
-
-
-	//vkUpdateDescriptorSets(*device, 1, &frameBufferWrite, 0, VK_NULL_HANDLE);
-
-	//VulkanEngine::engine->_mainDeletionQueue.push_function([=]() {
-	//	//vkDestroyDescriptorSetLayout(*device, _buffer2DescSetLayout, nullptr);
-	//	vkDestroyDescriptorSetLayout(*device, _buffer2DescSetLayout, nullptr);
-	//	vkDestroyDescriptorPool(*device, _buffer2DescPool, nullptr);
-	//	});
-
-
-	////-----------------------------------------------------------------------------------------------------------------------------------------------------
-
-	//VkShaderModule computeShaderModule;
-
-	////system("glslc ./data/prueba.comp -o ./data/output/prueba.comp.spv");
-
-	//VulkanEngine::engine->load_shader_module(vkutil::findFile("gridreset.comp.spv", searchPaths, true).c_str(), &computeShaderModule);
-
-	//VkPipelineShaderStageCreateInfo shaderStageCI = vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_COMPUTE_BIT, computeShaderModule);
-
-	//VkPushConstantRange _constantRangeCI = {};
-	//_constantRangeCI.offset = 0;
-	//_constantRangeCI.size = sizeof(int);
-	//_constantRangeCI.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-
-	//VkPipelineLayoutCreateInfo pipelineLayoutCI = vkinit::pipeline_layout_create_info();
-	//pipelineLayoutCI.setLayoutCount = 1;
-	//pipelineLayoutCI.pSetLayouts = &_buffer2DescSetLayout;
-	//pipelineLayoutCI.pPushConstantRanges = &_constantRangeCI;
-	//pipelineLayoutCI.pushConstantRangeCount = 1;
-	//VK_CHECK(vkCreatePipelineLayout(*device, &pipelineLayoutCI, nullptr, &_buffer2PipelineLayout));
-
-	//VkComputePipelineCreateInfo computePipelineCI = {};
-	//computePipelineCI.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
-	//computePipelineCI.stage = shaderStageCI;
-	//computePipelineCI.layout = _buffer2PipelineLayout;
-
-	//VK_CHECK(vkCreateComputePipelines(*device, VK_NULL_HANDLE, 1, &computePipelineCI, nullptr, &_buffer2Pipeline));
-
-	//// Fill the buffer
-
-	//vkDestroyShaderModule(*device, computeShaderModule, nullptr);
-	//VulkanEngine::engine->_mainDeletionQueue.push_function([=]() {
-	//	vkDestroyPipeline(*device, _buffer2Pipeline, nullptr);
-	//	vkDestroyPipelineLayout(*device, _buffer2PipelineLayout, nullptr);
-	//	});
-
-	////-------------------------------------------------------------------------------------------------------------------------------------
-
-
-	//VkCommandBufferBeginInfo beginInfo = vkinit::command_buffer_begin_info(VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT);
-
-	//VkCommandBuffer& cmd = _commandbuffer2;
-
-	//VK_CHECK(vkBeginCommandBuffer(cmd, &beginInfo));
-
-	//vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _buffer2Pipeline);
-	//vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _buffer2PipelineLayout, 0, 1, &_buffer2DescSet, 0, nullptr);
-
-
-	////shaderIf = 2;
-
-	//int x = 2;
-
-	//vkCmdPushConstants(cmd, _buffer2PipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(int), &x);
-
-	//vkCmdDispatch(cmd, (SURFEL_TABLE_SIZE + 63) / 64, 1, 1);
-
-	//VK_CHECK(vkEndCommandBuffer(cmd));
-
-}
-
 
 void Renderer::surfel_position()
 {
@@ -4429,10 +4324,22 @@ void Renderer::create_surfel_rtx_pipeline()
 		shaderGroup.anyHitShader = VK_SHADER_UNUSED_KHR;
 		shaderGroup.intersectionShader = VK_SHADER_UNUSED_KHR;
 
-		shaderGroup.generalShader = static_cast<uint32_t>(SurfelShaderStages.size()) - 1;
 		surfelShaderGroups.push_back(shaderGroup);
 	}
 
+	VkShaderModule hshadowModule;
+	{
+		SurfelShaderStages.push_back(engine->load_shader_stage(vkutil::findFile("shadow.rmiss.spv", searchPaths, true).c_str(), &hshadowModule, VK_SHADER_STAGE_MISS_BIT_KHR));
+		VkRayTracingShaderGroupCreateInfoKHR shaderGroup{};
+		shaderGroup.sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR;
+		shaderGroup.type = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR;
+		shaderGroup.generalShader = static_cast<uint32_t>(SurfelShaderStages.size()) - 1;
+		shaderGroup.closestHitShader = VK_SHADER_UNUSED_KHR;
+		shaderGroup.anyHitShader = VK_SHADER_UNUSED_KHR;
+		shaderGroup.intersectionShader = VK_SHADER_UNUSED_KHR;
+
+		surfelShaderGroups.push_back(shaderGroup);
+	}
 
 	// Hit group
 	VkShaderModule hhitModule;
@@ -4445,6 +4352,7 @@ void Renderer::create_surfel_rtx_pipeline()
 		shaderGroup.closestHitShader = static_cast<uint32_t>(SurfelShaderStages.size()) - 1;
 		shaderGroup.anyHitShader = VK_SHADER_UNUSED_KHR;
 		shaderGroup.intersectionShader = VK_SHADER_UNUSED_KHR;
+
 		surfelShaderGroups.push_back(shaderGroup);
 	}
 
@@ -4471,6 +4379,7 @@ void Renderer::create_surfel_rtx_pipeline()
 
 
 	vkDestroyShaderModule(*device, hraygenModule, nullptr);
+	vkDestroyShaderModule(*device, hshadowModule, nullptr);
 	vkDestroyShaderModule(*device, hmissModule, nullptr);
 	vkDestroyShaderModule(*device, hhitModule, nullptr);
 
@@ -4500,8 +4409,8 @@ void Renderer::create_surfel_rtx_SBT()
 	const VkBufferUsageFlags bufferUsageFlags = VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
 
 	VulkanEngine::engine->create_buffer(handleSize, bufferUsageFlags, VMA_MEMORY_USAGE_CPU_TO_GPU, _SurfelRTXraygenSBT);
-	VulkanEngine::engine->create_buffer(handleSize, bufferUsageFlags, VMA_MEMORY_USAGE_CPU_TO_GPU, _SurfelRTXmissSBT);
-	//VulkanEngine::engine->create_buffer(handleSize * 2, bufferUsageFlags, VMA_MEMORY_USAGE_CPU_TO_GPU, _SurfelRTXmissSBT);
+	//VulkanEngine::engine->create_buffer(handleSize, bufferUsageFlags, VMA_MEMORY_USAGE_CPU_TO_GPU, _SurfelRTXmissSBT);
+	VulkanEngine::engine->create_buffer(handleSize * 2, bufferUsageFlags, VMA_MEMORY_USAGE_CPU_TO_GPU, _SurfelRTXmissSBT);
 	VulkanEngine::engine->create_buffer(handleSize, bufferUsageFlags, VMA_MEMORY_USAGE_CPU_TO_GPU, _SurfelRTXhitSBT);
 
 	void* rayGenData, * missData, * hitData;
@@ -4509,15 +4418,15 @@ void Renderer::create_surfel_rtx_SBT()
 	vmaMapMemory(VulkanEngine::engine->_allocator, _SurfelRTXraygenSBT._allocation, &rayGenData);
 	memcpy(rayGenData, shaderHandleStorage.data(), handleSize);
 	vmaMapMemory(VulkanEngine::engine->_allocator, _SurfelRTXmissSBT._allocation, &missData);
-	memcpy(missData, shaderHandleStorage.data() + handleSizeAligned, handleSize);
+	memcpy(missData, shaderHandleStorage.data() + handleSizeAligned, handleSize * 2);
 	vmaMapMemory(VulkanEngine::engine->_allocator, _SurfelRTXhitSBT._allocation, &hitData);
-	memcpy(hitData, shaderHandleStorage.data() + handleSizeAligned * 2, handleSize);
+	memcpy(hitData, shaderHandleStorage.data() + handleSizeAligned * 3, handleSize);
 
 	vmaUnmapMemory(VulkanEngine::engine->_allocator, _SurfelRTXraygenSBT._allocation);
 	vmaUnmapMemory(VulkanEngine::engine->_allocator, _SurfelRTXmissSBT._allocation);
 	vmaUnmapMemory(VulkanEngine::engine->_allocator, _SurfelRTXhitSBT._allocation);
 
-
+	 
 }
 
 void Renderer::create_surfel_rtx_cmd_buffer()

@@ -7,6 +7,7 @@
 #include "bitwise.glsl"
 
 layout(location = 0) rayPayloadInEXT hitPayload prd;
+layout (location = 1) rayPayloadEXT bool shadowed;
 
 layout (set = 0, binding = 10) uniform sampler2D[] skybox;
 
@@ -35,7 +36,7 @@ void main()
 
     // prd = hitPayload(prd.colorAndDist, prd.pEnergy, prd.seed);
 
-
+    shadowed = false;
 
     vec3 dir            = normalize(gl_WorldRayDirectionEXT);
     vec2 uv             = vec2(0.5 + atan(dir.x, dir.z) / (2 * PI), 0.5 - asin(dir.y) / PI);

@@ -29,6 +29,16 @@ float GeometrySchlickGGX(float NdotV, float k);
 float GeometrySmith(vec3 N, vec3 V, vec3 L, float k);
 vec3 FresnelSchlick(float cosTheta, vec3 F0);
 
+vec3 degamma(vec3 c)
+{
+	return pow(c,vec3(2.2));
+}
+
+vec3 gamma(vec3 c)
+{
+	return pow(c,vec3(1.0/2.2));;
+}
+
 void main() 
 {
 	vec3 position 	= texture(positionTexture, inUV).xyz;
@@ -53,30 +63,6 @@ void main()
 	vec2 envUV 		= vec2(0.5 + atan(N.x, N.z) / (2 * PI), 0.5 - asin(N.y) / PI);
 	vec3 irradiance = texture(environmentTexture, envUV).xyz;
 
-	if(debug.target > 0.001)
-	{
-		switch(debug.target){
-			case 1:
-				outFragColor = vec4(position, 1);
-				break;
-			case 2:
-				outFragColor = vec4(normal, 0);
-				break;
-			case 3:
-				outFragColor = vec4(albedo, 1);
-				break;
-			case 4:
-				outFragColor = vec4(motion, 1);
-				break;
-			case 5:
-				outFragColor = vec4(material, 1);
-				break;
-			case 6:
-				outFragColor = vec4(emissive, 1);
-				break;
-		}
-		return;
-	}
 
 	vec3 color = vec3(1), Lo = vec3(0);
 	float attenuation = 1.0, light_intensity = 1.0;
@@ -87,7 +73,7 @@ void main()
 		bool isDirectional 	= light.pos.w < 0;
 		vec3 L 				= isDirectional ? light.pos.xyz : (light.pos.xyz - position.xyz);
 		vec3 H 				= normalize(V + normalize(L));
-		float NdotL 		= max(dot(N, normalize(L)), 0.0);
+		float NdotL 		= clamp(dot(N, normalize(L)), 0.0, 1.0);
 
 		// Calculate the directional light
 		if(isDirectional)
@@ -98,14 +84,13 @@ void main()
 		{
 			float light_max_distance 	= light.pos.w;
 			float light_distance 		= length(L);
-			light_intensity 			= light.color.w / (light_distance * light_distance);
-
+			light_intensity 			= light.color.w;
+			L 								= normalize(L);
 			attenuation = light_max_distance - light_distance;
 			attenuation /= light_max_distance;
 			attenuation = max(attenuation, 0.0);
-			attenuation = attenuation * attenuation;
 
-			vec3 radiance = light.color.xyz * light_intensity * attenuation;
+			vec3 radiance = (light.color.xyz) * light_intensity * attenuation;
 
 			float NDF 	= DistributionGGX(N, H, roughness);
 			float G 	= GeometrySmith(N, V, L, roughness);
@@ -114,8 +99,8 @@ void main()
 			kD *= 1.0 - metallic;
 
 			vec3 numerator 		= NDF * G * F;
-			float denominator 	= 4.0 * NdotV * max(dot(N, L), 0.0);
-			vec3 specular 		= numerator / max(denominator, 0.001);
+			float denominator 	= 4.0 * NdotV * max(dot(N, L), 0.000001);
+			vec3 specular 		= numerator / denominator;
 
 			vec3 kS = F;
 
@@ -135,20 +120,42 @@ void main()
   		vec3 ambient = diffuse;
 
 
-		color = Lo + indirect;// * 0.3;
-		color += emissive;
+		color = Lo + indirect * 0.7 ;
+		color += degamma(emissive);
 	}
 	else{
-		color = albedo;
+		//color = albedo;
+		color = vec3(0.0);
 	}
-	if(debugGI.x != 0 || debugGI.y != 0 || debugGI.z != 0|| debugGI.w != 0){
-		//outFragColor = vec4(debugGI, 1.0 );
-		//return;
 
-		//color = debugGI.xyz;
-	}
-	else{
-		//color = resultGI.xyz;
+	if(debug.target > 0.001)
+	{
+		switch(debug.target){
+			case 1:
+				outFragColor = vec4(position, 1);
+				break;
+			case 2:
+				outFragColor = vec4(normal, 0);
+				break;
+			case 3:
+				outFragColor = vec4((Lo + degamma(emissive)), 1);
+				break;
+			case 4:
+				outFragColor = vec4(motion, 1);
+				break;
+			case 5:
+				if(debugGI.x != 0 || debugGI.y != 0 || debugGI.z != 0|| debugGI.w != 0){
+					outFragColor = vec4(debugGI.xyz, 1.0);
+				}
+				else{
+					outFragColor = vec4( color.xyz, 1.0f );
+				}
+				break;
+			case 6:
+				outFragColor = vec4(resultGI.xyz, 1);
+				break;
+		}
+		return;
 	}
 
 	outFragColor = vec4( color.xyz, 1.0f );

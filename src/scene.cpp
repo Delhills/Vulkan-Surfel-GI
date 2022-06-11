@@ -40,18 +40,18 @@ void Scene::default_scene()
 	Light* light = new Light();
 	light->m_matrix = glm::translate(glm::mat4(1), glm::vec3(10, 12, -5));
 	light->color = glm::vec3{ 1.0f, 0.8f, 0.5f };
-	light->intensity = 500.0f;
+	light->intensity = 3.0f;
 	light->radius = 0.1f;
 
 	Light* light2 = new Light();
 	light2->m_matrix = glm::translate(glm::mat4(1), glm::vec3(-10, 15, -5));
 	light2->color = glm::vec3{ 0.5f, 1.0f, 1.0f };
-	light2->intensity = 250.0f;
+	light2->intensity = 3.0f;
 	light2->radius = 0.2f;
 
 	Light* light3 = new Light();
 	light3->m_matrix = glm::translate(glm::mat4(1), glm::vec3(0, 15, 5));
-	light3->intensity = 500.f;
+	light3->intensity = 3.f;
 	light3->radius = 0.09f;
 
 	_lights.push_back(light);
@@ -161,24 +161,24 @@ void Scene::default_scene()
 void Scene::cornell_scene()
 {
 	_camera = new Camera(glm::vec3(0, 5, 10));
-	//_camera = new Camera(glm::vec3(20, 5, -5));
 
 	// Create lights
 	// -------------
 	Light* light = new Light();
-	light->m_matrix = glm::translate(glm::mat4(1), glm::vec3(0, 8.5, -5));
+	light->m_matrix = glm::translate(glm::mat4(1), glm::vec3(0, 9.0, -5.0));
 	//light->m_matrix = glm::translate(glm::mat4(1), glm::vec3(0, 0.5, 0));
 	//light->color = glm::vec3{ 0.0f, 0.0f, 1.0f };
-	light->color = glm::vec3{ 0.78f, 0.78f, 0.78f };
-	light->intensity = 250.0f;
+	light->color = glm::vec3{ 0.70f, 0.70f, 0.70f };
+	light->intensity = 3.0f;
 	light->radius = 10.1f;
+	light->maxDistance = 60.1f;
 
 	_lights.push_back(light);
 
 	// Create own Materials
 	// --------------------
 	Material* m_white = new Material();
-	m_white->diffuseColor = glm::vec4(0.725, 0.71, 0.68, 1);
+	m_white->diffuseColor = glm::vec4(0.70, 0.70, 0.60, 1);
 	//m_floor->metallicFactor = 0.1f;
 	Material* m_red = new Material();
 	m_red->diffuseColor = glm::vec4(0.73, 0.065, 0.05, 1);
@@ -253,7 +253,7 @@ void Scene::cornell_scene()
 
 	Object* mirror_sphere = new Object();
 	mirror_sphere->prefab = p_mirror_sphere;
-	mirror_sphere->m_matrix = glm::translate(glm::mat4(1), glm::vec3(2.f, 1.5f, -4.f)) *
+	mirror_sphere->m_matrix = glm::translate(glm::mat4(1), glm::vec3(2.f, 1.5f, -5.f)) *
 		glm::rotate(glm::mat4(1), glm::radians(-15.0f), glm::vec3(0, 1, 0))*
 		glm::scale(glm::mat4(1), glm::vec3(3, 3, 3));
 	mirror_sphere->material = Material::_materials[p_mirror_sphere->_root[0]->_primitives[0]->materialID];

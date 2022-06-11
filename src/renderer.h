@@ -483,8 +483,6 @@ private:
 
 	void build_surfel_binning_buffer();
 
-	void todo_de_nuevo();
-
 
 	void create_surfel_rtx_descriptors();
 

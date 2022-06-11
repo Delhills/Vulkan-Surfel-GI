@@ -70,13 +70,16 @@ void Window::handleEvent(SDL_Event& e, const float dt)
 			VulkanEngine::engine->_scene->_camera->processKeyboard(UP, dt);
 		}
 		if (e.key.keysym.sym == SDLK_1) {
-			VulkanEngine::engine->_mode = DEFERRED;
+			VulkanEngine::engine->debugTarget = 0;
 		}
 		if (e.key.keysym.sym == SDLK_2) {
-			VulkanEngine::engine->_mode = RAYTRACING;
+			VulkanEngine::engine->debugTarget = 6;
 		}
 		if (e.key.keysym.sym == SDLK_3) {
-			VulkanEngine::engine->_mode = HYBRID;
+			VulkanEngine::engine->debugTarget = 3;
+		}
+		if (e.key.keysym.sym == SDLK_0) {
+			VulkanEngine::engine->debugTarget = 5;
 		}
 		if (e.key.keysym.sym == SDLK_4) {
 			VulkanEngine::engine->_skyboxFollow = !VulkanEngine::engine->_skyboxFollow;
