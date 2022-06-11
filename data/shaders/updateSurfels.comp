@@ -27,9 +27,7 @@ layout (binding = 1) buffer SurfelDataBuffer {
 } surfelsData;
 
 layout (binding = 2) buffer StatsBuffer {uint stats[8];} statsBuffer;
-layout (binding = 3) buffer GridBuffer {
-	SurfelGridCell cells[];
-} gridcells;
+layout (binding = 3) buffer GridBuffer {uint cells[SURFEL_TABLE_SIZE];} gridcells;
 
 layout (binding = 4) uniform CameraBuffer
 {
@@ -54,26 +52,8 @@ void main()
 	SurfelData surfel_data = surfelsData.surfelDataInBuffer[surfel_index];
 	Surfel surfel = surfels.surfelInBuffer[surfel_index];
 
-	vec3 pos = surfel.position;
-	vec3 n = normalize(surfel.normal);
-
 	surfel.color = surfel_data.mean;
 	surfel.radius = SURFEL_MAX_RADIUS;
 
-	vec3 campos = cameraData.pos;
-
-	//vec3 campos = vec3(0.0, 5.0, -10);
-
-	vec3 center_cell = surfel_cell(surfel.position, campos);
-	for (uint i = 0; i < 27; ++i)
-	{
-		ivec3 gridpos = ivec3(center_cell + surfel_neighbor_offsets[i]);
-
-		if(surfel_cellintersects(surfel, gridpos, campos))
-		{
-			uint cellindex = surfel_cellindex(gridpos);
-			atomicAdd(gridcells.cells[cellindex].count, 1);
-		}
-	}
 	surfels.surfelInBuffer[surfel_index] = surfel;
 }

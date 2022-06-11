@@ -24,11 +24,9 @@ layout (binding = 0) buffer SurfelBuffer {
 } surfels;
 
 layout (binding = 1) buffer StatsBuffer {uint stats[8];} statsBuffer;
-layout (binding = 2) buffer GridBuffer {
-	SurfelGridCell cells[];
-} gridcells;
+layout (binding = 2) buffer GridBuffer {uint cells[SURFEL_TABLE_SIZE];} gridcells;
 
-layout (binding = 3) buffer CellBuffer {uint cell[];} surfelcells;
+layout (binding = 3) buffer CellBuffer {uint indexSurf[SURFEL_TABLE_SIZE * 100];} surfelcells;
 
 layout (binding = 4) uniform CameraBuffer
 {
@@ -41,32 +39,5 @@ layout (binding = 4) uniform CameraBuffer
 
 void main()
 {	
-	uint surfel_count = statsBuffer.stats[0];
-	if (gl_GlobalInvocationID.x  >= surfel_count)
-	{
-		return;
-	}
-
-	uint surfel_index = gl_GlobalInvocationID.x;
-	Surfel surfel = surfels.surfelInBuffer[surfel_index];
-
-	vec3 campos = cameraData.pos;
-
-	//vec3 campos = vec3(0.0, 5.0, -10);
-
-	ivec3 center_cell = surfel_cell(ivec3(surfel.position), campos);
-	for (uint i = 0; i < 27; ++i)
-	{
-		ivec3 gridpos = ivec3(center_cell + surfel_neighbor_offsets[i]);
-
-		if(surfel_cellintersects(surfel, gridpos, campos))
-		{
-			uint cellindex = surfel_cellindex(gridpos);
-			uint previous;
-			previous = atomicAdd(gridcells.cells[cellindex].count, 1);
-			surfelcells.cell[gridcells.cells[gl_GlobalInvocationID.x].offset + previous] = surfel_index;
-			
-		}
-	}
 	
 }

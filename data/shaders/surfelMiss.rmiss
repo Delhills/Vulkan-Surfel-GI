@@ -11,7 +11,7 @@ layout (location = 1) rayPayloadEXT bool shadowed;
 
 layout (set = 0, binding = 10) uniform sampler2D[] skybox;
 
-layout (set = 0, binding = 17) buffer SurfelDataBuffer {
+layout (set = 0, binding = 15) buffer SurfelDataBuffer {
 	SurfelData surfelDataInBuffer[];
 } surfelsData;
 

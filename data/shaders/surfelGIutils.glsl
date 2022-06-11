@@ -5,11 +5,12 @@ const uint SURFEL_CAPACITY = 100000;
 const uint SURFEL_INDIRECT_NUMTHREADS = 32;
 const float SURFEL_TARGET_COVERAGE = 0.5;
 
+
 vec3 fakepos = vec3(0.0, 5.0, 5.0);
 
 #define PI 3.14159265358979323846
 
-const uint SURFEL_CELL_LIMIT = 1000;
+const uint SURFEL_CELL_LIMIT = 100;
 
 struct Surfel
 {
@@ -21,13 +22,6 @@ struct Surfel
 	float radius;
 };
 
-struct SurfelGridCell
-{
-	uint count;
-	uint offset;
-	uint pad0;
-	uint pad1;
-};
 
 struct SurfelData
 {
@@ -107,7 +101,7 @@ bool surfel_cellintersects(Surfel surfel, ivec3 cell, vec3 campos)
 
 	vec3 closestPointInAabb = min(max(surfel.position, gridmin), gridmax);
 	float dist = distance(closestPointInAabb, surfel.position);
-	if (dist < surfel.radius){
+	if (dist < SURFEL_MAX_RADIUS){
 		return true;
 	}
 	return false;

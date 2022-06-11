@@ -29,12 +29,7 @@ layout (set = 0, binding = 13) buffer SurfelBuffer {
 
 layout (set = 0, binding = 14) buffer StatsBuffer {uint stats[8];} statsBuffer;
 
-layout (set = 0, binding = 15) buffer GridBuffer {
-	SurfelGridCell cells[];
-} gridcells;
-layout (set = 0, binding = 16) buffer CellBuffer {uint indexSurf[];} surfelcells;
-
-layout (set = 0, binding = 17) buffer SurfelDataBuffer {
+layout (set = 0, binding = 15) buffer SurfelDataBuffer {
 	SurfelData surfelDataInBuffer[];
 } surfelsData;
 

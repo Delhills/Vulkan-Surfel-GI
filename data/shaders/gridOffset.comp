@@ -18,18 +18,11 @@ layout (local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
 // }pushC;
 
 layout (binding = 0) buffer StatsBuffer {uint stats[8];} statsBuffer;
-layout (binding = 1) buffer GridBuffer {
-	SurfelGridCell cells[];
-} gridcells;
-layout (binding = 2) buffer CellBuffer {uint cell[];} surfelcells;
+layout (binding = 1) buffer GridBuffer {uint cells[SURFEL_TABLE_SIZE];} gridcells;
+layout (binding = 2) buffer CellBuffer {uint indexSurf[SURFEL_TABLE_SIZE * 100];} surfelcells;
 
 
 void main()
 {	
-
-	SurfelGridCell cell = gridcells.cells[gl_GlobalInvocationID.x];
-	cell.offset = atomicAdd(statsBuffer.stats[1], cell.count);
-	cell.count = 0;
-	gridcells.cells[gl_GlobalInvocationID.x] = cell;
 	
 }

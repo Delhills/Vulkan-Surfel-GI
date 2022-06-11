@@ -16,11 +16,9 @@ layout (local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
 // 	int x;
 // }pushC;
 
-layout (binding = 0) buffer GridBuffer {
-	SurfelGridCell cells[];
-} gridcells;
+layout (binding = 0) buffer GridBuffer {uint cells[SURFEL_TABLE_SIZE];} gridcells;
 
 void main()
 {	
-	gridcells.cells[gl_GlobalInvocationID.x].count = 0;
+	//gridcells.cells[gl_GlobalInvocationID.x].count = 0;
 }

@@ -62,13 +62,6 @@ struct SurfelData
 	glm::vec3 traceresult;
 };
 
-struct SurfelGridCell
-{
-	unsigned int count;
-	unsigned int offset;
-	unsigned int pad0;
-	unsigned int pad1;
-};
 
 static const unsigned int SURFEL_STATS_OFFSET_COUNT = 0;
 static const unsigned int SURFEL_STATS_OFFSET_CELLALLOCATOR = 4;

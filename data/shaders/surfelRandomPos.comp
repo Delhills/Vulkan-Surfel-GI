@@ -26,10 +26,8 @@ layout (binding = 0) buffer SurfelBuffer {
 layout (binding = 1) uniform sampler2D normalTexture;
 layout (binding = 2) buffer StatsBuffer {uint stats[8];} statsBuffer;
 // layout (binding = 3) uniform sampler2D positionTexture;
-layout (binding = 4) buffer GridBuffer {
-	SurfelGridCell cells[];
-} gridcells;
-layout (binding = 5) buffer CellBuffer {uint indexSurf[];} surfelcells;
+layout (binding = 4) buffer GridBuffer {uint cells[SURFEL_TABLE_SIZE];} gridcells;
+layout (binding = 5) buffer CellBuffer {uint indexSurf[SURFEL_TABLE_SIZE * 100];} surfelcells;
 layout (binding = 6) uniform CameraBuffer
 {
 	mat4 view;
@@ -94,7 +92,7 @@ void main()
 
 	float coverage = 0;
 	
-	vec3 campos = cameraData.pos;
+	vec3 campos = vec3(0.0);
 
 	//vec3 campos = vec3(0.0, 5.0, -10);
 
@@ -112,7 +110,7 @@ void main()
 	//debug = vec4(1.0, 1.0, 0.0, 0.0);
 
 	uint cellindex = surfel_cellindex(gridpos);
-	SurfelGridCell cell = gridcells.cells[cellindex];
+	uint cellcount = gridcells.cells[cellindex];
 
 	// for (uint i = 0; i < cell.count; ++i)
 	// {
@@ -150,10 +148,11 @@ void main()
 
 
 
-	for (uint i = 0; i < statsBuffer.stats[0]; ++i)
+	for (uint i = 0; i < cellcount; ++i)
 	{
 		//uint surfel_index = surfelcells.indexSurf[cell.offset + i];
-		Surfel surfel = surfels.surfelInBuffer[i];
+		uint surfel_index = surfelcells.indexSurf[100 * cellindex + i];
+		Surfel surfel = surfels.surfelInBuffer[surfel_index];
 
 		vec3 L = surfel.position - P;
 		float dist2 = dot(L, L);
@@ -188,7 +187,7 @@ void main()
 		}
 	}
 
-	if(cell.count < SURFEL_CELL_LIMIT){
+	if(cellcount < SURFEL_CELL_LIMIT){
 		uint surfel_count_at_pixel = 0;
 		// surfel_count_at_pixel = or(surfel_count_at_pixel, (uint(coverage) & 0xFF) << 8);
 		// surfel_count_at_pixel = or(surfel_count_at_pixel, ((gl_LocalInvocationID.x & 0xF) << 4));
@@ -242,8 +241,38 @@ void main()
 		uint surfel_alloc;
 		surfel_alloc = atomicAdd(statsBuffer.stats[0], 1);
 		if (surfel_alloc < SURFEL_CAPACITY){
-			surfels.surfelInBuffer[surfel_alloc].position = P;
-			surfels.surfelInBuffer[surfel_alloc].normal = N;
+			
+			Surfel surfel;
+
+			surfel.position = P;
+			surfel.normal = N;
+
+			for (uint i = 0; i < 27; ++i)
+			{
+				ivec3 gridpos2 = ivec3(gridpos + surfel_neighbor_offsets[i]);
+
+				if(surfel_cellintersects(surfel, gridpos2, campos))
+				{
+					uint cellindex2 = surfel_cellindex(gridpos2);
+					uint count2 = atomicAdd(gridcells.cells[cellindex2], 1);
+
+					uint index2 = cellindex2 * 100 + count2;
+
+					surfelcells.indexSurf[index2] = surfel_alloc;
+				}
+			}
+
+			surfels.surfelInBuffer[surfel_alloc] = surfel;
+
+
+
+			// uint count = atomicAdd(gridcells.cells[cellindex], 1);
+
+			// uint index = cellindex * 100 + count;
+
+			// surfelcells.indexSurf[index] = surfel_alloc;
+
+
 //int(pushC.camPos.x);
 			//surfels.surfelInBuffer[surfel_alloc].color = color.rgb;
 			// surfels.surfelInBuffer[surfel_alloc].pad0 = float(gl_GlobalInvocationID.x);

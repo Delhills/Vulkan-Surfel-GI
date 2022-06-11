@@ -2852,8 +2852,8 @@ void Renderer::create_SurfelGi_resources()
 	VulkanEngine::engine->create_buffer(sizeof(Surfel) * SURFEL_CAPACITY, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY, _SurfelBuffer);
 	VulkanEngine::engine->create_buffer(sizeof(SurfelData) * SURFEL_CAPACITY, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY, _SurfelDataBuffer);
 	VulkanEngine::engine->create_buffer(sizeof(unsigned int) * 8, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY, _SurfelStatsBuffer);
-	VulkanEngine::engine->create_buffer(sizeof(SurfelGridCell) * SURFEL_TABLE_SIZE, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY, _SurfelGridBuffer);
-	VulkanEngine::engine->create_buffer(sizeof(unsigned int) * SURFEL_CAPACITY * 27, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY, _SurfelCellBuffer);
+	VulkanEngine::engine->create_buffer(sizeof(unsigned int) * SURFEL_TABLE_SIZE, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY, _SurfelGridBuffer);
+	VulkanEngine::engine->create_buffer(sizeof(unsigned int) * SURFEL_TABLE_SIZE * 100, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY, _SurfelCellBuffer);
 }
 
 
@@ -3011,9 +3011,9 @@ void Renderer::create_surfel_position_descriptors()
 	//VkDescriptorImageInfo positionDescriptorInfo = vkinit::descriptor_image_info(_deferredTextures[0].imageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, _SurfelPositionNormalSampler);
 	//VkDescriptorImageInfo positionDescriptorInfo = { _SurfelPositionNormalSampler, Texture::GET("blueNoise.png")->imageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
 	
-	VkDescriptorBufferInfo gridDescInfo = vkinit::descriptor_buffer_info(_SurfelGridBuffer._buffer, sizeof(SurfelGridCell) * SURFEL_TABLE_SIZE);
+	VkDescriptorBufferInfo gridDescInfo = vkinit::descriptor_buffer_info(_SurfelGridBuffer._buffer, sizeof(unsigned int) * SURFEL_TABLE_SIZE);
 	
-	VkDescriptorBufferInfo cellDescInfo = vkinit::descriptor_buffer_info(_SurfelCellBuffer._buffer, sizeof(unsigned int) * SURFEL_CAPACITY * 27);
+	VkDescriptorBufferInfo cellDescInfo = vkinit::descriptor_buffer_info(_SurfelCellBuffer._buffer, sizeof(unsigned int) * SURFEL_TABLE_SIZE * 100);
 
 	VkDescriptorBufferInfo statsDescInfo = vkinit::descriptor_buffer_info(_SurfelStatsBuffer._buffer, sizeof(unsigned int) * 8);
 
@@ -3329,7 +3329,7 @@ void Renderer::create_grid_reset_descriptors()
 	VK_CHECK(vkAllocateDescriptorSets(*device, &gridResetDescriptorSetAllocateInfo, &_GridResetDescSet));
 
 
-	VkDescriptorBufferInfo gridDescInfo = vkinit::descriptor_buffer_info(_SurfelGridBuffer._buffer, sizeof(SurfelGridCell) * SURFEL_TABLE_SIZE);
+	VkDescriptorBufferInfo gridDescInfo = vkinit::descriptor_buffer_info(_SurfelGridBuffer._buffer, sizeof(unsigned int) * SURFEL_TABLE_SIZE);
 
 	VkWriteDescriptorSet GridWrite = vkinit::write_descriptor_buffer(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, _GridResetDescSet, &gridDescInfo, 0);
 
@@ -3405,7 +3405,7 @@ void Renderer::build_grid_reset_buffer()
 	bufferbarrierdesc.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
 	bufferbarrierdesc.pNext = nullptr;
 	bufferbarrierdesc.buffer = _SurfelGridBuffer._buffer;
-	bufferbarrierdesc.size = sizeof(SurfelGridCell) * SURFEL_TABLE_SIZE;
+	bufferbarrierdesc.size = sizeof(unsigned int) * SURFEL_TABLE_SIZE;
 	bufferbarrierdesc.offset = 0;
 	bufferbarrierdesc.srcAccessMask = VK_ACCESS_SHADER_READ_BIT; // VK_ACCESS_INDIRECT_COMMAND_READ_BIT
 
@@ -3496,7 +3496,7 @@ void Renderer::create_update_surfels_descriptors()
 
 	//VkDescriptorImageInfo depthDescriptorDepth = vkinit::descriptor_image_info(_deferredTextures[6].imageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, _SurfelPositionNormalSampler);
 
-	VkDescriptorBufferInfo gridDescInfo = vkinit::descriptor_buffer_info(_SurfelGridBuffer._buffer, sizeof(SurfelGridCell) * SURFEL_TABLE_SIZE);
+	VkDescriptorBufferInfo gridDescInfo = vkinit::descriptor_buffer_info(_SurfelGridBuffer._buffer, sizeof(unsigned int) * SURFEL_TABLE_SIZE);
 
 
 	VkDescriptorBufferInfo cameraBufferInfo = vkinit::descriptor_buffer_info(_cameraBuffer._buffer, sizeof(GPUCameraData));
@@ -3699,9 +3699,9 @@ void Renderer::create_grid_offset_descriptors()
 
 	VkDescriptorBufferInfo statsDescInfo = vkinit::descriptor_buffer_info(_SurfelStatsBuffer._buffer, sizeof(unsigned int) * 8);
 
-	VkDescriptorBufferInfo gridDescInfo = vkinit::descriptor_buffer_info(_SurfelGridBuffer._buffer, sizeof(SurfelGridCell) * SURFEL_TABLE_SIZE);
+	VkDescriptorBufferInfo gridDescInfo = vkinit::descriptor_buffer_info(_SurfelGridBuffer._buffer, sizeof(unsigned int) * SURFEL_TABLE_SIZE);
 
-	VkDescriptorBufferInfo cellDescInfo = vkinit::descriptor_buffer_info(_SurfelCellBuffer._buffer, sizeof(unsigned int) * SURFEL_CAPACITY * 27);
+	VkDescriptorBufferInfo cellDescInfo = vkinit::descriptor_buffer_info(_SurfelCellBuffer._buffer, sizeof(unsigned int) * SURFEL_TABLE_SIZE * 100);
 
 
 	VkWriteDescriptorSet statsWrite = vkinit::write_descriptor_buffer(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, _GridOffsetDescSet, &statsDescInfo, 0);
@@ -3782,7 +3782,7 @@ void Renderer::build_grid_offset_buffer()
 	bufferbarrierdesc1.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
 	bufferbarrierdesc1.pNext = nullptr;
 	bufferbarrierdesc1.buffer = _SurfelCellBuffer._buffer;
-	bufferbarrierdesc1.size = sizeof(unsigned int) * SURFEL_CAPACITY * 27;
+	bufferbarrierdesc1.size = sizeof(unsigned int) * SURFEL_TABLE_SIZE * 100;
 	bufferbarrierdesc1.offset = 0;
 	bufferbarrierdesc1.srcAccessMask = VK_ACCESS_SHADER_READ_BIT; // VK_ACCESS_INDIRECT_COMMAND_READ_BIT
 
@@ -3915,9 +3915,9 @@ void Renderer::create_surfel_binning_descriptors()
 
 	VkDescriptorBufferInfo statsDescInfo = vkinit::descriptor_buffer_info(_SurfelStatsBuffer._buffer, sizeof(unsigned int) * 8);
 
-	VkDescriptorBufferInfo gridDescInfo = vkinit::descriptor_buffer_info(_SurfelGridBuffer._buffer, sizeof(SurfelGridCell) * SURFEL_TABLE_SIZE);
+	VkDescriptorBufferInfo gridDescInfo = vkinit::descriptor_buffer_info(_SurfelGridBuffer._buffer, sizeof(unsigned int) * SURFEL_TABLE_SIZE);
 
-	VkDescriptorBufferInfo cellDescInfo = vkinit::descriptor_buffer_info(_SurfelCellBuffer._buffer, sizeof(unsigned int) * SURFEL_CAPACITY * 27);
+	VkDescriptorBufferInfo cellDescInfo = vkinit::descriptor_buffer_info(_SurfelCellBuffer._buffer, sizeof(unsigned int) * SURFEL_TABLE_SIZE * 100);
 
 	VkDescriptorBufferInfo cameraBufferInfo = vkinit::descriptor_buffer_info(_cameraBuffer._buffer, sizeof(GPUCameraData));
 
@@ -4012,7 +4012,7 @@ void Renderer::build_surfel_binning_buffer()
 	bufferbarrierdesc1.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
 	bufferbarrierdesc1.pNext = nullptr;
 	bufferbarrierdesc1.buffer = _SurfelCellBuffer._buffer;
-	bufferbarrierdesc1.size = sizeof(unsigned int) * SURFEL_CAPACITY * 27;
+	bufferbarrierdesc1.size = sizeof(unsigned int) * SURFEL_TABLE_SIZE * 100;
 	bufferbarrierdesc1.offset = 0;
 	bufferbarrierdesc1.srcAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT; // VK_ACCESS_INDIRECT_COMMAND_READ_BIT
 
@@ -4026,7 +4026,7 @@ void Renderer::build_surfel_binning_buffer()
 	bufferbarrierdesc2.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
 	bufferbarrierdesc2.pNext = nullptr;
 	bufferbarrierdesc2.buffer = _SurfelGridBuffer._buffer;
-	bufferbarrierdesc2.size = sizeof(SurfelGridCell) * SURFEL_TABLE_SIZE;
+	bufferbarrierdesc2.size = sizeof(unsigned int) * SURFEL_TABLE_SIZE;
 	bufferbarrierdesc2.offset = 0;
 	bufferbarrierdesc2.srcAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT; // VK_ACCESS_INDIRECT_COMMAND_READ_BIT
 
@@ -4111,9 +4111,7 @@ void Renderer::create_surfel_rtx_descriptors()
 	VkDescriptorSetLayoutBinding matrixBufferBinding = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, 11);	// Matrices
 	VkDescriptorSetLayoutBinding surfelBufferBinding = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, 13);	// surfels
 	VkDescriptorSetLayoutBinding surfelStatsBufferBinding = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, 14);	// stats
-	VkDescriptorSetLayoutBinding surfelGridBufferBinding = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, 15);	// grid
-	VkDescriptorSetLayoutBinding surfelCellBufferBinding = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, 16);	// cell
-	VkDescriptorSetLayoutBinding surfelDataBufferBinding = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR | VK_SHADER_STAGE_MISS_BIT_KHR, 17);	// data
+	VkDescriptorSetLayoutBinding surfelDataBufferBinding = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR | VK_SHADER_STAGE_MISS_BIT_KHR, 15);	// data
 
 	std::vector<VkDescriptorSetLayoutBinding> setLayoutBindings =
 	{
@@ -4129,8 +4127,6 @@ void Renderer::create_surfel_rtx_descriptors()
 		skyboxBufferBinding,
 		surfelBufferBinding,
 		surfelStatsBufferBinding,
-		surfelGridBufferBinding,
-		surfelCellBufferBinding,
 		surfelDataBufferBinding
 	};
 
@@ -4237,9 +4233,6 @@ void Renderer::create_surfel_rtx_descriptors()
 
 	VkDescriptorBufferInfo statsDescInfo = vkinit::descriptor_buffer_info(_SurfelStatsBuffer._buffer, sizeof(unsigned int) * 8);
 
-	VkDescriptorBufferInfo gridDescInfo = vkinit::descriptor_buffer_info(_SurfelGridBuffer._buffer, sizeof(SurfelGridCell) * SURFEL_TABLE_SIZE);
-
-	VkDescriptorBufferInfo cellDescInfo = vkinit::descriptor_buffer_info(_SurfelCellBuffer._buffer, sizeof(unsigned int) * SURFEL_CAPACITY * 27);
 
 	VkDescriptorBufferInfo surfelDataDescInfo = vkinit::descriptor_buffer_info(_SurfelDataBuffer._buffer, sizeof(SurfelData) * SURFEL_CAPACITY);
 
@@ -4257,9 +4250,7 @@ void Renderer::create_surfel_rtx_descriptors()
 	VkWriteDescriptorSet matrixBufferWrite = vkinit::write_descriptor_buffer(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, _SurfelRTXDescSet, &matrixDescInfo, 11);
 	VkWriteDescriptorSet surfelBufferWrite = vkinit::write_descriptor_buffer(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, _SurfelRTXDescSet, &surfelDescInfo, 13);
 	VkWriteDescriptorSet statsWrite = vkinit::write_descriptor_buffer(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, _SurfelRTXDescSet, &statsDescInfo, 14);
-	VkWriteDescriptorSet GridWrite = vkinit::write_descriptor_buffer(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, _SurfelRTXDescSet, &gridDescInfo, 15);
-	VkWriteDescriptorSet cellWrite = vkinit::write_descriptor_buffer(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, _SurfelRTXDescSet, &cellDescInfo, 16);
-	VkWriteDescriptorSet surfelDataBufferWrite = vkinit::write_descriptor_buffer(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, _SurfelRTXDescSet, &surfelDataDescInfo, 17);
+	VkWriteDescriptorSet surfelDataBufferWrite = vkinit::write_descriptor_buffer(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, _SurfelRTXDescSet, &surfelDataDescInfo, 15);
 
 	std::vector<VkWriteDescriptorSet> writes = {
 		accelerationStructureWrite,	// 0 TLAS
@@ -4274,8 +4265,6 @@ void Renderer::create_surfel_rtx_descriptors()
 		skyboxBufferWrite,
 		surfelBufferWrite,
 		statsWrite,
-		GridWrite,
-		cellWrite,
 		surfelDataBufferWrite
 		};
 
@@ -4458,8 +4447,8 @@ void Renderer::create_surfel_rtx_cmd_buffer()
 		//missShaderSbtEntry.deviceAddress	= VulkanEngine::engine->getBufferDeviceAddress(_SurfelRTXmissSBT._buffer);
 		missShaderSbtEntry.deviceAddress	= VulkanEngine::engine->vkGetBufferDeviceAddressKHR(*device, &bufferDeviceAddressInfo);
 		missShaderSbtEntry.stride			= VulkanEngine::engine->_rtProperties.shaderGroupHandleSize;
-		//missShaderSbtEntry.size				= VulkanEngine::engine->_rtProperties.shaderGroupHandleSize * 2;
-		missShaderSbtEntry.size				= VulkanEngine::engine->_rtProperties.shaderGroupHandleSize;
+		missShaderSbtEntry.size				= VulkanEngine::engine->_rtProperties.shaderGroupHandleSize * 2;
+		//missShaderSbtEntry.size				= VulkanEngine::engine->_rtProperties.shaderGroupHandleSize;
 	
 		bufferDeviceAddressInfo.buffer = _SurfelRTXhitSBT._buffer;
 
@@ -4557,9 +4546,9 @@ void Renderer::create_surfel_shade_descriptors()
 
 	VkDescriptorBufferInfo statsDescInfo = vkinit::descriptor_buffer_info(_SurfelStatsBuffer._buffer, sizeof(unsigned int) * 8);
 
-	VkDescriptorBufferInfo gridDescInfo = vkinit::descriptor_buffer_info(_SurfelGridBuffer._buffer, sizeof(SurfelGridCell) * SURFEL_TABLE_SIZE);
+	VkDescriptorBufferInfo gridDescInfo = vkinit::descriptor_buffer_info(_SurfelGridBuffer._buffer, sizeof(unsigned int) * SURFEL_TABLE_SIZE);
 
-	VkDescriptorBufferInfo cellDescInfo = vkinit::descriptor_buffer_info(_SurfelCellBuffer._buffer, sizeof(unsigned int) * SURFEL_CAPACITY * 27);
+	VkDescriptorBufferInfo cellDescInfo = vkinit::descriptor_buffer_info(_SurfelCellBuffer._buffer, sizeof(unsigned int) * SURFEL_TABLE_SIZE * 100);
 
 	VkDescriptorBufferInfo dataBufferInfo = vkinit::descriptor_buffer_info(_SurfelDataBuffer._buffer, sizeof(SurfelData) * SURFEL_CAPACITY);
 

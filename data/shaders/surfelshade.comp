@@ -24,11 +24,9 @@ layout (binding = 0) buffer SurfelBuffer {
 
 layout (binding = 1) buffer StatsBuffer {uint stats[8];} statsBuffer;
 
-layout (binding = 2) buffer GridBuffer {
-	SurfelGridCell cells[];
-} gridcells;
+layout (binding = 2) buffer GridBuffer {uint cells[SURFEL_TABLE_SIZE];} gridcells;
 
-layout (binding = 3) buffer CellBuffer {uint indexSurf[];} surfelcells;
+layout (binding = 3) buffer CellBuffer {uint indexSurf[SURFEL_TABLE_SIZE * 100];} surfelcells;
 
 layout (binding = 4) buffer SurfelDataBuffer {
 	SurfelData surfelDataInBuffer[];
@@ -111,12 +109,20 @@ void main()
 	vec3 pos = surfel_data.hitpos;
 	vec3 N = normalize(surfel_data.hitnormal);
 
+	vec3 campos = vec3(0.0);
+
+	uint cellindex = surfel_cellindex(surfel_cell(pos, campos));
+
+	uint cellcount = gridcells.cells[cellindex];
+	
 	vec4 surfelGI = vec4(0.0);
 
-	for (uint i = 0; i < statsBuffer.stats[0]; ++i)
+	for (uint i = 0; i < cellcount; ++i)
 	{
 		//uint surfel_index = surfelcells.indexSurf[cell.offset + i];
-		Surfel surfel = surfels.surfelInBuffer[i];
+
+		uint surfel_index = surfelcells.indexSurf[100 * cellindex + i];
+		Surfel surfel = surfels.surfelInBuffer[surfel_index];
 
 		vec3 L = surfel.position - pos;
 		float dist2 = dot(L, L);
@@ -150,11 +156,16 @@ void main()
 	vec3 surfN = normalize(surfel.normal);
 	float surfrad = surfel.radius;
 
-	for (uint i = 0; i < statsBuffer.stats[0]; ++i)
-	{
-	// 	//uint surfel_index = surfelcells.indexSurf[cell.offset + i];
+	cellindex = surfel_cellindex(surfel_cell(surfpos, campos));
 
-		Surfel surfel2 = surfels.surfelInBuffer[i];
+	cellcount = gridcells.cells[cellindex];
+
+	for (uint i = 0; i < cellcount; ++i)
+	{
+		
+		uint surfel_index = surfelcells.indexSurf[cellindex * 100 + i];
+
+		Surfel surfel2 = surfels.surfelInBuffer[surfel_index];
 	 	surfel2.radius += surfrad;
 
 	 	vec3 L = surfel2.position - surfpos;

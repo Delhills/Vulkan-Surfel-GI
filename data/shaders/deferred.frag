@@ -121,7 +121,7 @@ void main()
 			}
 		}
 
-		directLight = max(vec3(0), energy.xyz * NdotL * lightning / PI);
+		directLight += max(vec3(0), energy.xyz * NdotL * lightning / PI);
 	}
 
 	vec3 indirect = clamp(vec3(0.0), vec3(0.999), resultGI.xyz);
@@ -135,8 +135,8 @@ void main()
 		color += degamma(emissive);
 	}
 	else{
-		//color = albedo;
-		color = vec3(0.0);
+		color = albedo;
+		//color = vec3(0.0);
 	}
 
 	if(debug.target > 0.001)
