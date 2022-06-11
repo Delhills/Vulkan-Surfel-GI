@@ -793,8 +793,8 @@ void VulkanEngine::updateCameraMatrices()
 		cameraData.prevView		= prevView;
 		cameraData.prevProj		= prevProj;
 		cameraData.pos			= _scene->_camera->_position;
-		cameraData.near			= 0.1f;
-		cameraData.far			= 1000.0f;
+		cameraData.pad0			= 0.0;
+		cameraData.nearFarFrame = glm::vec4(0.1, 1000.0, float(_denoise_frame), 0.0);
 
 		prevView = view;
 		prevProj = projection;

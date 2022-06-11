@@ -52,8 +52,8 @@ struct GPUCameraData
 	glm::mat4 prevView;
 	glm::mat4 prevProj;
 	glm::vec3 pos;
-	float near;
-	float far;
+	float pad0;
+	glm::vec4 nearFarFrame;
 };
 
 struct RTCameraData
