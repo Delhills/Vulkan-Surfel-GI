@@ -82,8 +82,7 @@ void Window::handleEvent(SDL_Event& e, const float dt)
 			VulkanEngine::engine->debugTarget = 5;
 		}
 		if (e.key.keysym.sym == SDLK_4) {
-			VulkanEngine::engine->_skyboxFollow = !VulkanEngine::engine->_skyboxFollow;
-			std::cout << VulkanEngine::engine->_skyboxFollow << std::endl;
+			VulkanEngine::engine->debugTarget = 4;
 		}
 		if (e.key.keysym.sym == SDLK_ESCAPE) VulkanEngine::engine->_bQuit = true;
 	}

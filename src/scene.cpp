@@ -169,7 +169,7 @@ void Scene::cornell_scene()
 	//light->m_matrix = glm::translate(glm::mat4(1), glm::vec3(0, 0.5, 0));
 	//light->color = glm::vec3{ 0.0f, 0.0f, 1.0f };
 	light->color = glm::vec3{ 0.70f, 0.70f, 0.70f };
-	light->intensity = 3.0f;
+	light->intensity = 1.5f;
 	light->radius = 10.1f;
 	light->maxDistance = 60.1f;
 

@@ -64,63 +64,74 @@ void main()
 	vec3 irradiance = texture(environmentTexture, envUV).xyz;
 
 
+	vec3 energy = vec3(1.0);
+
+
+	const float f90 = clamp(0.0, 1.0, (50.0 * dot(F0, vec3(0.33))));
+
+	vec3 F = F0 + (f90 - F0) * pow((1.0 - NdotV), 5); //Schlick 1994, "An Inexpensive BRDF Model for Physically-Based Rendering"
+
+	const float specChance = dot(F, vec3(0.333));
+	energy.xyz *= albedo / (1 - specChance);
+
+
+
+
+
+	vec3 lightning = vec3(0);
+	float dist = 0;
+	float NdotL = 0;
+
+	vec3 directLight = vec3(0.0);
+
 	vec3 color = vec3(1), Lo = vec3(0);
 	float attenuation = 1.0, light_intensity = 1.0;
 	
 	for(int i = 0; i < lightBuffer.lights.length(); i++)
 	{
-		Light light 		= lightBuffer.lights[i];
-		bool isDirectional 	= light.pos.w < 0;
-		vec3 L 				= isDirectional ? light.pos.xyz : (light.pos.xyz - position.xyz);
-		vec3 H 				= normalize(V + normalize(L));
-		float NdotL 		= clamp(dot(N, normalize(L)), 0.0, 1.0);
+		Light light						= lightBuffer.lights[i];
+		const bool isDirectional        = light.pos.w < 0;
+		vec3 L							= (light.pos.xyz - position);
+		const float light_max_distance 	= light.pos.w;
+		const float light_intensity		= light.color.w;
 
-		// Calculate the directional light
-		if(isDirectional)
+		const float dist2 = dot(L, L);
+		const float range2 = light_max_distance * light_max_distance;
+
+		const float light_distance		= length(L);
+		//L 								= normalize(L);
+
+		if (dist2 < range2)
 		{
-			Lo += (NdotL * light.color.xyz);
+			dist = sqrt(dist2);
+			L /= dist;
+			NdotL = clamp(0.0, 1.0, dot(L, N));
+
+			if (NdotL > 0)
+			{
+				const vec3 lightColor = light.color.rgb * light_intensity;
+
+				lightning = lightColor;
+
+				const float range2 = light_max_distance * light_max_distance;
+				const float att = clamp(0.0, 1.0, (1.0 - (dist2 / range2)));
+				const float attenuation = att * att;
+
+				lightning *= attenuation;
+			}
 		}
-		else	// Calculate point lights
-		{
-			float light_max_distance 	= light.pos.w;
-			float light_distance 		= length(L);
-			light_intensity 			= light.color.w;
-			L 								= normalize(L);
-			attenuation = light_max_distance - light_distance;
-			attenuation /= light_max_distance;
-			attenuation = max(attenuation, 0.0);
 
-			vec3 radiance = (light.color.xyz) * light_intensity * attenuation;
-
-			float NDF 	= DistributionGGX(N, H, roughness);
-			float G 	= GeometrySmith(N, V, L, roughness);
-			vec3 F 		= FresnelSchlick(max(dot(H, V), 0.0), F0);
-			vec3 kD = vec3(1.0) - F;
-			kD *= 1.0 - metallic;
-
-			vec3 numerator 		= NDF * G * F;
-			float denominator 	= 4.0 * NdotV * max(dot(N, L), 0.000001);
-			vec3 specular 		= numerator / denominator;
-
-			vec3 kS = F;
-
-			Lo += (kD * pow(albedo, vec3(2.2)) / PI + specular) * radiance * NdotL;
-		}
+		directLight = max(vec3(0), energy.xyz * NdotL * lightning / PI);
 	}
 
 	vec3 indirect = clamp(vec3(0.0), vec3(0.999), resultGI.xyz);
 
-	indirect = indirect / (vec3(1.0) + indirect);
+	vec3 tonemap = indirect / (vec3(1.0) + indirect);
 	
 	if(!background){
 		// Ambient from IBL
-		vec3 F = FresnelSchlick(NdotV, F0);
-  		vec3 kD = (1.0 - F) * (1.0 - metallic);
-  		vec3 diffuse = kD * albedo * irradiance;
-  		vec3 ambient = diffuse;
 
-
-		color = Lo + indirect * 0.7 ;
+		color = directLight + indirect * 0.5;
 		color += degamma(emissive);
 	}
 	else{
@@ -138,10 +149,10 @@ void main()
 				outFragColor = vec4(normal, 0);
 				break;
 			case 3:
-				outFragColor = vec4((Lo + degamma(emissive)), 1);
+				outFragColor = vec4(directLight, 1);
 				break;
 			case 4:
-				outFragColor = vec4(motion, 1);
+				outFragColor = vec4(tonemap, 1);
 				break;
 			case 5:
 				if(debugGI.x != 0 || debugGI.y != 0 || debugGI.z != 0|| debugGI.w != 0){

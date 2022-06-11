@@ -86,112 +86,94 @@ void main()
 	const float metallic          = roughnessMetallic.z;
 	vec3 F0                       = mix(vec3(0.04), albedo, metallic);
 
-	// Environment 
-	vec2 environmentUV = vec2(0.5 + atan(N.x, N.z) / (2 * PI), 0.5 - asin(N.y) / PI);
-	vec3 irradiance = texture(environmentTexture[1], environmentUV).xyz;
-
 	vec4 direction = vec4(1, 1, 1, 0);
 	vec4 origin = vec4(worldPos, 0);
-	vec3 difColor = vec3(0);
+	vec3 lightning = vec3(0);
+
+	vec3 result = vec3(0.0);
+
+	result += max(vec3(0.0), prd.energy.xyz * emissive);
+
+	const float f90 = clamp(0.0, 1.0, (50.0 * dot(F0, vec3(0.33))));
+
+	vec3 F = F0 + (f90 - F0) * pow((1.0 - NdotV), 5); //Schlick 1994, "An Inexpensive BRDF Model for Physically-Based Rendering"
+
+	const float specChance = dot(F, vec3(0.333));
+	prd.energy.xyz *= albedo / (1 - specChance);
+
+
+	float shadowFactor = 0.0;
+
+	float dist = 0;
+	float NdotL = 0;
+
 	for(int i = 0; i < lightsBuffer.lights.length(); i++)
 	{
 		// Init basic light information
 		Light light						= lightsBuffer.lights[i];
 		const bool isDirectional        = light.pos.w < 0;
 		vec3 L							= isDirectional ? light.pos.xyz : (light.pos.xyz - worldPos);
-
-
 		const float light_max_distance 	= light.pos.w;
-		const float light_distance		= length(L);
-		L 								= normalize(L);
-		const vec3 H                    = normalize(V + L);
 		const float light_intensity		= isDirectional ? 1.0f : light.color.w;
 
-		//const float light_intensity		= (100.0 / (light_distance * light_distance));
-		const float NdotL				= clamp(dot(N, L), 0.0, 1.0);
-		const float NdotH               = clamp(dot(N, H), 0.0, 1.0);
-		float shadowFactor              = 1.0;
+		const float dist2 = dot(L, L);
+		const float range2 = light_max_distance * light_max_distance;
 
-		// Check if light has impact
-		// Calculate attenuation factor
-		if(light_intensity == 0){
-			attenuation = 0.0;
-		}
-		else{
-			attenuation = light_max_distance - light_distance;
-			attenuation /= light_max_distance;
-			attenuation = max(attenuation, 0.0);
-		}
+		const float light_distance		= length(L);
+		//L 								= normalize(L);
 
-		if(shadingMode == 0)  // DIFUS
+		if (dist2 < range2)
 		{
-			if(NdotL > 0)
+			dist = sqrt(dist2);
+			L /= dist;
+			NdotL = clamp(0.0, 1.0, dot(L, N));
+
+			if (NdotL > 0)
 			{
-				for(int a = 0; a < 1; a++)
-				{
-					// Init as shadowed
-					shadowed 	        = true;
-					// if(light_distance < light_max_distance)
-					// {
-					vec3 dir          = L;
-					const uint flags  = gl_RayFlagsOpaqueEXT | gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsSkipClosestHitShaderEXT;
-					float tmin = 0.001, tmax  = light_distance - 0.001;
+				const vec3 lightColor = light.color.rgb * light_intensity;
 
-					// Shadow ray cast
-					traceRayEXT(topLevelAS, flags, 0xff, 0, 0, 1, 
-					worldPos.xyz + dir * 0.01, tmin, dir, tmax, 1);
-					// }
+				lightning = lightColor;
 
-					if(shadowed){
-						shadowFactor = 0.0;
-					}
-					else{
-						shadowFactor = 1.0;
-					}
+				const float range2 = light_max_distance * light_max_distance;
+				const float att = clamp(0.0, 1.0, (1.0 - (dist2 / range2)));
+				const float attenuation = att * att;
+
+				lightning *= attenuation;
+			}
+		}
+
+		if(NdotL > 0 && dist > 0)
+		{
+			for(int a = 0; a < 1; a++)
+			{
+				// Init as shadowed
+				shadowed 	        = true;
+				// if(light_distance < light_max_distance)
+				// {
+				vec3 dir          = L;
+				const uint flags  = gl_RayFlagsOpaqueEXT | gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsSkipClosestHitShaderEXT;
+				float tmin = 0.001, tmax  = light_distance - 0.001;
+
+				// Shadow ray cast
+				traceRayEXT(topLevelAS, flags, 0xff, 0, 0, 1, 
+				worldPos.xyz + dir * 0.01, tmin, dir, tmax, 1);
+				// }
+
+				if(shadowed){
+					shadowFactor = 0.0;
+				}
+				else{
+					shadowFactor = 1.0;
 				}
 			}
-
-			vec3 radiance = light_intensity * (light.color.xyz) * attenuation * shadowFactor;
-			vec3 F        = FresnelSchlick(NdotH, F0);
-			float D       = DistributionGGX(N, H, roughness);
-			float G       = GeometrySmith(N, V, L, roughness);
-
-			vec3 numerator    = D * G * F;
-			float denominator = max(4.0 * clamp(dot(N, V), 0.0, 1.0) * NdotL, 0.000001);
-			vec3 specular     = numerator / denominator;
-
-			vec3 kS = F;
-			vec3 kD = (vec3(1.0) - kS) * (1.0 - metallic);
-
-			prd.energy.xyz *= kD * albedo;
-
-			Lo += (prd.energy.xyz / PI + specular) * radiance * NdotL;
-			//direction = vec4(1, 1, 1, 0);
 		}
 
-		vec3 radiance = (light.color.xyz) * light_intensity * attenuation;
-
-		float NDF 	= DistributionGGX(N, H, roughness);
-		float G 	= GeometrySmith(N, V, L, roughness);
-		vec3 F 		= FresnelSchlick(max(dot(H, V), 0.0), F0);
-		vec3 kD = vec3(1.0) - F;
-		kD *= 1.0 - metallic;
-
-		vec3 numerator 		= NDF * G * F;
-		float denominator 	= 4.0 * NdotV * max(dot(N, L), 0.000001);
-		vec3 specular 		= numerator / denominator;
-
-		vec3 kS = F;
-
-		prd.energy.xyz = (kD * albedo);
-
-		Lo += NdotL * prd.energy.xyz * radiance / PI;
+		result += max(vec3(0), shadowFactor * prd.energy.xyz * NdotL * lightning / PI);
 
 	}
 
 	surfelsData.surfelDataInBuffer[prd.surfel_index].hitpos = worldPos;
 	surfelsData.surfelDataInBuffer[prd.surfel_index].hitnormal = N;
 
-	vec3 color = Lo + degamma(emissive);
-	prd.colorAndDist.xyz    += color;
+	prd.colorAndDist.xyz    = result;
 }
