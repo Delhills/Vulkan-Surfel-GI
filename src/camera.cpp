@@ -54,7 +54,7 @@ glm::mat4 Camera::getView()
 glm::mat4 Camera::getProjection(const float ratio)
 {
 	// TODO
-	return glm::perspective(glm::radians(_fov), ratio, 0.1f, 1000.0f);
+	return glm::perspective(glm::radians(_fov), ratio, 0.1f, 200.0f);
 }
 
 

@@ -2957,7 +2957,7 @@ void Renderer::create_surfel_position_descriptors()
 	VkDescriptorSetLayoutBinding _PositionBufferBinding = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT, 0);
 	VkDescriptorSetLayoutBinding normalBinding = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_COMPUTE_BIT, 1);
 	VkDescriptorSetLayoutBinding statsBinding = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT, 2);
-	//VkDescriptorSetLayoutBinding positionBinding = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_COMPUTE_BIT, 3);
+	VkDescriptorSetLayoutBinding positionBinding = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_COMPUTE_BIT, 3);
 	VkDescriptorSetLayoutBinding _GridBufferBinding = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT, 4);
 	VkDescriptorSetLayoutBinding _CellBufferBinding = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT, 5);
 	VkDescriptorSetLayoutBinding cameraBufferBinding = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT, 6);			// Camera buffer
@@ -2973,7 +2973,7 @@ void Renderer::create_surfel_position_descriptors()
 		normalBinding,
 		statsBinding,
 		depthBinding,
-		//positionBinding,
+		positionBinding,
 		_GridBufferBinding,
 		_CellBufferBinding,
 		cameraBufferBinding,
@@ -3009,7 +3009,7 @@ void Renderer::create_surfel_position_descriptors()
 
 	VkDescriptorImageInfo depthDescriptorDepth = vkinit::descriptor_image_info(_deferredTextures[6].imageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, _SurfelPositionNormalSampler);
 	//VkDescriptorImageInfo positionDescriptorInfo = vkinit::descriptor_image_info(_deferredTextures[0].imageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, _SurfelPositionNormalSampler);
-	//VkDescriptorImageInfo positionDescriptorInfo = { _SurfelPositionNormalSampler, Texture::GET("blueNoise.png")->imageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
+	VkDescriptorImageInfo positionDescriptorInfo = { _SurfelPositionNormalSampler, Texture::GET("blueNoise.png")->imageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
 	
 	VkDescriptorBufferInfo gridDescInfo = vkinit::descriptor_buffer_info(_SurfelGridBuffer._buffer, sizeof(unsigned int) * SURFEL_TABLE_SIZE);
 	
@@ -3027,7 +3027,7 @@ void Renderer::create_surfel_position_descriptors()
 	VkWriteDescriptorSet surfelBufferWrite = vkinit::write_descriptor_buffer(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, _SurfelPositionDescSet, &surfelDescInfo, 0);
 	VkWriteDescriptorSet normalWrite = vkinit::write_descriptor_image(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, _SurfelPositionDescSet, &texDescriptorNormal, 1);
 	VkWriteDescriptorSet statsWrite = vkinit::write_descriptor_buffer(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, _SurfelPositionDescSet, &statsDescInfo, 2);
-	//VkWriteDescriptorSet positionWrite = vkinit::write_descriptor_image(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, _SurfelPositionDescSet, &positionDescriptorInfo, 3);
+	VkWriteDescriptorSet positionWrite = vkinit::write_descriptor_image(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, _SurfelPositionDescSet, &positionDescriptorInfo, 3);
 	VkWriteDescriptorSet GridWrite = vkinit::write_descriptor_buffer(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, _SurfelPositionDescSet, &gridDescInfo, 4);
 	VkWriteDescriptorSet CellWrite = vkinit::write_descriptor_buffer(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, _SurfelPositionDescSet, &cellDescInfo, 5);
 	VkWriteDescriptorSet cameraWrite = vkinit::write_descriptor_buffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, _SurfelPositionDescSet, &cameraBufferInfo, 6);
@@ -3041,7 +3041,7 @@ void Renderer::create_surfel_position_descriptors()
 		normalWrite,
 		statsWrite,
 		depthWrite,
-		//positionWrite,
+		positionWrite,
 		GridWrite,
 		CellWrite,
 		cameraWrite,

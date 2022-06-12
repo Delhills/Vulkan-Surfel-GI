@@ -25,7 +25,7 @@ layout (binding = 0) buffer SurfelBuffer {
 //layout (binding = 0) buffer FrameCount {int[] pixel;} frameBuffer;
 layout (binding = 1) uniform sampler2D normalTexture;
 layout (binding = 2) buffer StatsBuffer {uint stats[8];} statsBuffer;
-// layout (binding = 3) uniform sampler2D positionTexture;
+layout (binding = 3) uniform sampler2D positionTexture;
 layout (binding = 4) buffer GridBuffer {uint cells[SURFEL_TABLE_SIZE];} gridcells;
 layout (binding = 5) buffer CellBuffer {uint indexSurf[SURFEL_TABLE_SIZE * 100];} surfelcells;
 layout (binding = 6) uniform CameraBuffer
@@ -176,23 +176,13 @@ void main()
 			if (dist2 <= (0.05 * 0.05)){
 				
 				debug = vec4(1.0, 0.0, 1.0, 1.0);
-				//color = vec4(surfel.color, 1.0);
-				//debug = vec4(1.0, 0.0, 0.0, 0.0);
-				//imageStore(image, ivec2(gl_GlobalInvocationID.xy), vec4(1.0, 0.0, 0.0, 0.0));
+				
 			}
-		}
-		else{
-			//debug = vec4(surfel.color, 1.0);
-			//imageStore(image, ivec2(gl_GlobalInvocationID.xy), vec4(0.0, 0.0, 0.0, 0.0));
 		}
 	}
 
 	if(cellcount < SURFEL_CELL_LIMIT){
 		uint surfel_count_at_pixel = 0;
-		// surfel_count_at_pixel = or(surfel_count_at_pixel, (uint(coverage) & 0xFF) << 8);
-		// surfel_count_at_pixel = or(surfel_count_at_pixel, ((gl_LocalInvocationID.x & 0xF) << 4));
-		// surfel_count_at_pixel = or(surfel_count_at_pixel, ((gl_LocalInvocationID.y & 0xF) << 0));
-
 		surfel_count_at_pixel |= (uint(coverage) & 0xFF) << 8;
 		surfel_count_at_pixel |= (gl_LocalInvocationID.x & 0xF) << 4;
 		surfel_count_at_pixel |= (gl_LocalInvocationID.y & 0xF) << 0;
@@ -222,21 +212,19 @@ void main()
 	if (gl_LocalInvocationID.x == minPixel.x && gl_LocalInvocationID.y == minPixel.y && coverage < SURFEL_TARGET_COVERAGE)
 	{
 
-		float lineardepth = linearize_depth(depth, cameraData.near, cameraData.far);
+		float lineardepth = linearize_depth(depth, cameraData.near, cameraData.far) * (1/cameraData.far);
 
-		//float chance = pow(1 - lineardepth, 4);
-
-		float chance = pow(1 - depth, 4);
+		float chance = pow(1 - lineardepth, 16);
 
 		uvec2 uvBlue = (gl_WorkGroupID.xy % 128);
 
 		vec2 uvBlueNDC = vec2(uvBlue) / 128.0;
 
-		//vec3 rand = texture(positionTexture, uvBlueNDC).xyz;
+		vec3 rand = texture(positionTexture, uvBlueNDC).xyz;
 
-		// if (rand.x < chance){
-		//  	return;
-		// }
+		if (rand.x < chance){
+		 	return;
+		}
 
 		uint surfel_alloc;
 		surfel_alloc = atomicAdd(statsBuffer.stats[0], 1);
@@ -263,20 +251,6 @@ void main()
 			}
 
 			surfels.surfelInBuffer[surfel_alloc] = surfel;
-
-
-
-			// uint count = atomicAdd(gridcells.cells[cellindex], 1);
-
-			// uint index = cellindex * 100 + count;
-
-			// surfelcells.indexSurf[index] = surfel_alloc;
-
-
-//int(pushC.camPos.x);
-			//surfels.surfelInBuffer[surfel_alloc].color = color.rgb;
-			// surfels.surfelInBuffer[surfel_alloc].pad0 = float(gl_GlobalInvocationID.x);
-			// surfels.surfelInBuffer[surfel_alloc].pad1 = float(gl_GlobalInvocationID.y);
 		}
 	}
 	
