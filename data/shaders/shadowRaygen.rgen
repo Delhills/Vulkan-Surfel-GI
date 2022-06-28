@@ -6,7 +6,7 @@
 #include "helpers.glsl"
 
 layout(binding = 0) uniform accelerationStructureEXT topLevelAS;
-layout(binding = 1, rgba8) uniform image2D[3] shadowImage;
+layout(binding = 1, rgba8) uniform image2D[2] shadowImage;
 layout(binding = 2) uniform CameraProperties 
 {
 	mat4 viewInverse;
@@ -40,14 +40,14 @@ void main()
 	int mode 		= int(materials.mat[int(matIdx)].shadingMetallicRoughness.x);
 	vec3 N = normalize(normal);
 
-	if(mode == 4)
-	{
-		for(int i = 0; i < lightsBuffer.lights.length(); i++)
-		{
-			imageStore(shadowImage[i], ivec2(gl_LaunchIDEXT.xy), vec4(1, 0, 0, 1));
-		}
-		return;
-	}
+	// if(mode == 4)
+	// {
+	// 	for(int i = 0; i < lightsBuffer.lights.length(); i++)
+	// 	{
+	// 		imageStore(shadowImage, ivec2(gl_LaunchIDEXT.xy), vec4(1, 0, 0, 1));
+	// 	}
+	// 	return;
+	// }
 
 	for(int i = 0; i < lightsBuffer.lights.length(); i++)
 	{
@@ -61,18 +61,20 @@ void main()
 		const float NdotL               = clamp(dot(N, L), 0.0, 1.0);
 		const float light_intensity     = isDirectional ? 1.0 : (light.color.w / (light_distance * light_distance));
     	float shadowFactor              = 0.0;
-    	int shadowSamples               = samplesBuffer.samples;
+    	//int shadowSamples               = samplesBuffer.samples;
+
+		int shadowSamples = 0;
 
 		if( NdotL > 0)
 		{
-			for(int s = 0; s < shadowSamples; s++)
+			for(int s = 0; s < 1; s++)
 			{
 				if(light_distance < light_max_distance)
 				{
 					shadowed 			= true;
-					const vec3 dir 		= sampleDisk(light, position, L, seed);
+					vec3 dir          = L;
 					const uint flags  	= gl_RayFlagsOpaqueEXT | gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsSkipClosestHitShaderEXT;
-					float tmin = 0.001, tmax = light_distance + 1;
+					float tmin = 0.001, tmax  = light_distance - 0.001;
 
 					// Shadow ray cast
 					traceRayEXT(topLevelAS, flags, 0xFF, 0, 0, 0, 
@@ -82,11 +84,14 @@ void main()
 					shadowed = false;
 				}
 				
-        		if(!shadowed){
-        		  shadowFactor++;
-        		}
+				if(shadowed){
+					shadowFactor = 0.0;
+				}
+				else{
+					shadowFactor = 1.0;
+				}
 			}
-			shadowFactor /= shadowSamples;
+			//shadowFactor /= shadowSamples;
 		}
 
 		vec3 color = vec3(shadowFactor);

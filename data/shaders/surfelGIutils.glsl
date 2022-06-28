@@ -25,12 +25,8 @@ struct Surfel
 
 struct SurfelData
 {
-	uvec2 primitiveID;
-	uint bary;
-	uint uid;
-
 	vec3 mean;
-	uint life;
+	float pad0;
 
 	vec3 shortMean;
 	float vbbr;
@@ -48,6 +44,7 @@ struct SurfelData
 	float padding2;
 
 	vec3 traceresult;
+	float padding3;
 };
 
 bool surfel_cellvalid(ivec3 cell){

@@ -94,7 +94,7 @@ void main()
 	vec3 F = F0 + (f90 - F0) * pow((1.0 - NdotV), 5); //Schlick 1994, "An Inexpensive BRDF Model for Physically-Based Rendering"
 
 	const float specChance = dot(F, vec3(0.333));
-	prd.energy.xyz *= albedo / (1 - specChance);
+	prd.energy.xyz *= albedo;
 
 
 	float shadowFactor = 0.0;
@@ -167,8 +167,9 @@ void main()
 
 	}
 
-	surfelsData.surfelDataInBuffer[prd.surfel_index].hitpos = worldPos;
-	surfelsData.surfelDataInBuffer[prd.surfel_index].hitnormal = N;
+	prd.worldp.xyz = worldPos;
+	prd.hitn.xyz = N;
 
-	prd.colorAndDist.xyz    = result;
+	vec3 color = Lo + degamma(emissive);
+	prd.colorAndDist.xyz    += result;
 }

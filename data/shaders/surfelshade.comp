@@ -119,8 +119,6 @@ void main()
 
 	for (uint i = 0; i < cellcount; ++i)
 	{
-		//uint surfel_index = surfelcells.indexSurf[cell.offset + i];
-
 		uint surfel_index = surfelcells.indexSurf[100 * cellindex + i];
 		Surfel surfel = surfels.surfelInBuffer[surfel_index];
 
@@ -128,7 +126,6 @@ void main()
 		float dist2 = dot(L, L);
 		if (dist2 < (surfel.radius * surfel.radius))
 		{
-			//imageStore(image, ivec2(gl_GlobalInvocationID.xy), vec4(1.0, 0.0, 0.0, 0.0));
 			vec3 normal = normalize(surfel.normal);
 			float dotN = dot(N, normal);
 			if (dotN > 0)
@@ -149,7 +146,9 @@ void main()
 	{
 		surfelGI.rgb = surfelGI.rgb / surfelGI.a;
 		surfelGI.a = clamp(0.0, 1.0, surfelGI.a);
-		result.rgb += max(vec3(0), surfel_data.hitenergy * surfelGI.rgb);
+		//result.rgb += max(vec3(0), surfel_data.hitenergy * surfelGI.rgb);
+
+		result.rgb += clamp(vec3(0.0), vec3(1.0), surfel_data.hitenergy * surfelGI.rgb);
 	}
 
 	vec3 surfpos = surfel.position;
@@ -172,7 +171,6 @@ void main()
 	 	float dist2 = dot(L, L);
 	 	if (dist2 < (surfel2.radius * surfel2.radius))
 	 	{
-	// 		//imageStore(image, ivec2(gl_GlobalInvocationID.xy), vec4(1.0, 0.0, 0.0, 0.0));
 	 		vec3 normal = normalize(surfel2.normal);
 	 		float dotN = dot(surfN, normal);
 	 		if (dotN > 0)
@@ -196,7 +194,9 @@ void main()
 	
 	surfelsData.surfelDataInBuffer[surfel_index] = surfel_data;
 
-	//surfels.surfelInBuffer[surfel_index] = surfel;
+
+
+	surfels.surfelInBuffer[surfel_index].color = surfel_data.mean;
 
 
 }

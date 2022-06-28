@@ -19,4 +19,5 @@ public:
 private:
 	void default_scene();
 	void cornell_scene();
+	void big_cornell_scene();
 };

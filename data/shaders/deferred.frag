@@ -1,10 +1,18 @@
 #version 460
 
+#include "random.glsl"
+
 struct Light{
 	vec4 pos;	// w used for max distance
 	vec4 color;	// w used for intensity
 	float radius;
 };
+
+// layout(push_constant) uniform constants
+// {
+// 	vec4 data;
+// 	mat4 render_matrix;
+// }pushC;
 
 layout (location = 0) out vec4 outFragColor;
 layout (location = 0) in vec2 inUV;
@@ -21,6 +29,7 @@ layout (set = 0, binding = 8) uniform sampler2D emissiveTexture;
 layout (set = 0, binding = 9) uniform sampler2D environmentTexture;
 layout (set = 0, binding = 10) uniform sampler2D debugGI;
 layout (set = 0, binding = 11) uniform sampler2D resultGI;
+layout (set = 0, binding = 12) uniform sampler2D[2] shadow;
 
 const float PI = 3.14159265359;
 
@@ -52,6 +61,8 @@ void main()
 
 	vec4 resultGI 	= texture(resultGI, inUV);
 
+	//float shadowFactor 	= texture(shadow, inUV).r;
+
 	bool background = texture(positionTexture, inUV).w == 0 && texture(normalTexture, inUV).w == 0;
 	float metallic 	= material.z;
 	float roughness = material.y;
@@ -72,8 +83,9 @@ void main()
 	vec3 F = F0 + (f90 - F0) * pow((1.0 - NdotV), 5); //Schlick 1994, "An Inexpensive BRDF Model for Physically-Based Rendering"
 
 	const float specChance = dot(F, vec3(0.333));
-	energy.xyz *= albedo / (1 - specChance);
+	//energy.xyz *= albedo / (1 - specChance);
 
+	energy.xyz *= albedo;
 
 
 
@@ -89,6 +101,8 @@ void main()
 	
 	for(int i = 0; i < lightBuffer.lights.length(); i++)
 	{
+		float shadowFactor 	= texture(shadow[i], inUV).r;
+
 		Light light						= lightBuffer.lights[i];
 		const bool isDirectional        = light.pos.w < 0;
 		vec3 L							= (light.pos.xyz - position);
@@ -121,7 +135,7 @@ void main()
 			}
 		}
 
-		directLight += max(vec3(0), energy.xyz * NdotL * lightning / PI);
+		directLight += max(vec3(0), shadowFactor * NdotL * lightning / PI);
 	}
 
 	vec3 indirect = clamp(vec3(0.0), vec3(0.999), resultGI.xyz);
@@ -131,12 +145,12 @@ void main()
 	if(!background){
 		// Ambient from IBL
 
-		color = directLight + indirect * 0.5;
+		color = energy.xyz * (directLight + indirect);
 		color += degamma(emissive);
 	}
 	else{
-		color = albedo;
-		//color = vec3(0.0);
+		//color = albedo;
+		color = vec3(0.0);
 	}
 
 	if(debug.target > 0.001)
@@ -152,7 +166,7 @@ void main()
 				outFragColor = vec4(directLight, 1);
 				break;
 			case 4:
-				outFragColor = vec4(tonemap, 1);
+				outFragColor = vec4(albedo, 1);
 				break;
 			case 5:
 				if(debugGI.x != 0 || debugGI.y != 0 || debugGI.z != 0|| debugGI.w != 0){

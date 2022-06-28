@@ -34,3 +34,7 @@
 
 %VK_SDK_PATH%/Bin/glslc.exe shaders/surfelshade.comp -o shaders/output/surfelshade.comp.spv
 %VK_SDK_PATH%/Bin/glslc.exe shaders/surfelshade.comp -o ../x64/Release/data/shaders/output/surfelshade.comp.spv
+
+
+%VK_SDK_PATH%/Bin/glslc.exe --target-spv=spv1.5 shaders/shadowRayGen.rgen -o shaders/output/shadowRayGen.rgen.spv
+%VK_SDK_PATH%/Bin/glslc.exe --target-spv=spv1.5 shaders/shadowRayGen.rgen -o ../x64/Release/data/shaders/output/shadowRayGen.rgen.spv

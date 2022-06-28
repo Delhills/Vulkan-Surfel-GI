@@ -37,12 +37,8 @@ struct Surfel
 
 struct SurfelData
 {
-	glm::uvec2 primitiveID;
-	glm::uint bary;
-	glm::uint uid;
-
 	glm::vec3 mean;
-	unsigned int life;
+	float pad0;
 
 	glm::vec3 shortMean;
 	float vbbr;
@@ -60,18 +56,18 @@ struct SurfelData
 	float padding2;
 
 	glm::vec3 traceresult;
+	float padding3;
 };
 
 
 static const unsigned int SURFEL_STATS_OFFSET_COUNT = 0;
-static const unsigned int SURFEL_STATS_OFFSET_CELLALLOCATOR = 4;
-static const unsigned int SURFEL_STATS_OFFSET_INDIRECT = 8;
 static const unsigned int SURFEL_INDIRECT_NUMTHREADS = 32;
-static const float SURFEL_TARGET_COVERAGE = 0.5;
 static const glm::uvec3 SURFEL_GRID_DIMENSIONS = glm::uvec3(128, 64, 128); // (64, 32, 64)   (128, 64, 128)
 static const unsigned int SURFEL_TABLE_SIZE = SURFEL_GRID_DIMENSIONS.x * SURFEL_GRID_DIMENSIONS.y * SURFEL_GRID_DIMENSIONS.z;
-
 static const unsigned int SURFEL_CAPACITY = 100000;
+static const float SURFEL_TARGET_COVERAGE = 0.5;
+const float SURFEL_MAX_RADIUS = 1;
+
 
 struct AccelerationStructure {
 	VkAccelerationStructureKHR	handle;
@@ -413,7 +409,7 @@ private:
 
 	//void build_raytracing_command_buffers();
 
-	//void build_shadow_command_buffer();
+	void build_shadow_command_buffer();
 
 	void build_compute_command_buffer();
 

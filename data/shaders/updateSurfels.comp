@@ -52,8 +52,8 @@ void main()
 	SurfelData surfel_data = surfelsData.surfelDataInBuffer[surfel_index];
 	Surfel surfel = surfels.surfelInBuffer[surfel_index];
 
-	surfel.color = surfel_data.mean;
-	surfel.radius = SURFEL_MAX_RADIUS;
+	//surfel.color = surfel_data.mean;
+	//surfel.radius = SURFEL_MAX_RADIUS;
 
 	surfels.surfelInBuffer[surfel_index] = surfel;
 }
